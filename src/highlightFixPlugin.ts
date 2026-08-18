@@ -29,8 +29,10 @@ const STYLE_ID = "uimprove-highlight-fix-styles";
 /** The highlight fix CSS, injected as a <style> element only while enabled. */
 const HIGHLIGHT_FIX_CSS = `
 :root {
-	--uimprove-highlight-bg: rgba(196, 41, 118, 0.774);
-	--uimprove-highlight-radius: 0.5em;
+	/* You can use your own css snippet overrides here too */
+	--uimprove-highlight-bg: var(--uimprove-user-highlight-bg, rgb(0 100 50 / 50%));
+    --uimprove-highlight-text: var(--uimprove-user-highlight-text, rgb(0 255 69 / 91%));
+    --uimprove-highlight-radius: var(--uimprove-user-highlight-radius, 0.5em);
 }
 
 /* Editor (Live Preview): disable the native, square highlight boxes … */
@@ -38,18 +40,34 @@ const HIGHLIGHT_FIX_CSS = `
 	background-color: transparent;
 }
 
+.cm-s-obsidian span.cm-highlight, .markdown-rendered mark, mark {
+    color: var(--uimprove-highlight-text);
+    box-decoration-break: clone; 
+}
+
+.markdown-rendered mark, mark {
+	background-color: var(--uimprove-highlight-bg);
+    border-radius: var(--uimprove-highlight-radius);
+	padding: 0 8px 2px 8px;
+}
+
 /* … and paint our own continuous one. */
 .cm-s-obsidian .uimprove-highlight-start,
 .cm-s-obsidian .uimprove-highlight-middle,
 .cm-s-obsidian .uimprove-highlight-end {
 	background-color: var(--uimprove-highlight-bg);
+	padding-top: 0;
+    padding-bottom: 2px;
+
+	/* This can be buggy because it only shows the decorations, 
+	it would normally have by design! */
+	box-decoration-break: clone;
 }
 
 .cm-s-obsidian .uimprove-highlight-start {
 	border-top-left-radius: var(--uimprove-highlight-radius);
 	border-bottom-left-radius: var(--uimprove-highlight-radius);
 	padding-left: 8px;
-
 }
 
 .cm-s-obsidian .uimprove-highlight-middle {
@@ -62,21 +80,8 @@ const HIGHLIGHT_FIX_CSS = `
 	padding-right: 8px;
 }
 
-/* Reading view: the <mark> element is continuous, so it only needs the
-paint + radius (start and end classes coincide on it). */
-.markdown-preview-view mark.uimprove-highlight-start,
-.markdown-rendered mark.uimprove-highlight-start {
-	background-color: var(--uimprove-highlight-bg);
-	border-radius: var(--uimprove-highlight-radius);
-}
-
 .cm-s-obsidian span.cm-formatting.cm-formatting-highlight.cm-highlight {
-	border: none;
-	border-radius: 0 !important;
-	padding-left: 0 !important;
-	padding-right: 0 !important;
 	background-color: var(--uimprove-highlight-bg);
-
 }
 `;
 

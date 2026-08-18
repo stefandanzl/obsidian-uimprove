@@ -58,6 +58,7 @@ tasks:
     desc: Copies the build files to plugin folder in Obsidian, if folder exists and .env file is set up.
     requires:
       vars: [VAULTS_DIR, VAULT_NAME]
+    silent: true
     cmds:
       - mkdir -p {{.DIR_PLUGIN}}
       - for: { var: FILES }
@@ -72,6 +73,7 @@ tasks:
   reload-app:
     desc: "Reload entire Obsidian app"
     aliases: [app, reload-obsidian]
+    silent: true
     cmds:
       - obsidian command id=app:reload
 
