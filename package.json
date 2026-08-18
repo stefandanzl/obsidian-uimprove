@@ -13,6 +13,8 @@
 	"author": "Stefan Danzl",
 	"license": "MIT",
 	"devDependencies": {
+		"@codemirror/language": "^6.12.4",
+		"@lezer/common": "^1.5.2",
 		"@types/node": "^26.2.0",
 		"@typescript-eslint/eslint-plugin": "8.67.0",
 		"@typescript-eslint/parser": "8.67.0",

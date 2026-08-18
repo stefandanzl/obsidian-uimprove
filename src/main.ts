@@ -1,15 +1,12 @@
 import { Plugin } from "obsidian";
-import { DEFAULT_SETTINGS } from "./settings";
-import { MySettings } from "./settings";
-import MyPluginSettingTab from "./settings";
+import { highlightFixPlugin, highlightPostProcessor } from "./highlightFixPlugin";
 
-export default class MyPlugin extends Plugin {
-	declare settings: MySettings;
-
+export default class UImprovePlugin extends Plugin {
 	async onload() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		// Highlight start/end classes (Live Preview)
+		this.registerEditorExtension(highlightFixPlugin);
 
-		// Add settings tab
-		this.addSettingTab(new MyPluginSettingTab(this.app, this));
+		// Highlight start/end classes (Reading view)
+		this.registerMarkdownPostProcessor(highlightPostProcessor);
 	}
 }

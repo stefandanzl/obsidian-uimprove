@@ -1,21 +1,22 @@
 import { App, PluginSettingTab } from "obsidian";
-import MyPlugin from "./main";
+import type UImprovePlugin from "./main";
 
-export interface MySettings {
-	enabled: boolean;
-	apiKey: string;
+export interface UImproveSettings {
+	// Feature toggles will be added once the features are stable.
 }
 
-export const DEFAULT_SETTINGS: MySettings = {
-	enabled: true,
-	apiKey: "",
-};
+export const DEFAULT_SETTINGS: UImproveSettings = {};
 
-export default class MyPluginSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+export default class UImproveSettingTab extends PluginSettingTab {
+	plugin: UImprovePlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: UImprovePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	display(): void {
+		const { containerEl } = this;
+		containerEl.empty();
 	}
 }
