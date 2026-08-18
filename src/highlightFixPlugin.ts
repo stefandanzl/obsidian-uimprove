@@ -1,5 +1,5 @@
 import { syntaxTree } from "@codemirror/language";
-import type { SyntaxNode } from "@lezer/common";
+import type { SyntaxNodeRef } from "@lezer/common";
 import { RangeSetBuilder } from "@codemirror/state";
 import {
 	Decoration,
@@ -18,100 +18,118 @@ const decoSingle = Decoration.mark({
 	class: "uimprove-highlight-start uimprove-highlight-end",
 });
 
-function isHighlightNode(name: string): boolean {
-	const lower = name.toLowerCase();
-	return lower.includes("highlight") && !lower.includes("formatting");
-}
-
-// TODO: remove — temporary debug logging to discover the actual node names
-// Obsidian's tree uses. Each distinct name is logged once per session, so the
-// console shows the full node vocabulary without spamming on every keystroke.
-const loggedNodeNames = new Set<string>();
-function debugLogNodeName(name: string): void {
-	if (name && !loggedNodeNames.has(name)) {
-		loggedNodeNames.add(name);
-		console.log(`[uimprove] syntax node: "${name}"`);
-	}
-}
-
 /**
- * Splits a highlight node into its visible content segments.
+ * In Obsidian's tree, a visual highlight `==a **b** c==` is NOT one node with
+ * children — it is a contiguous run of sibling nodes that all carry
+ * "highlight" in their name:
  *
- * Obsidian renders `==a **b** c==` as separate `.cm-highlight` boxes (one per
- * inline segment: "a ", "**b**", " c"), which is why border-radius applied via
- * plain `.cm-highlight` rounds every box. The segments returned here mirror
- * those render boundaries: text runs between child nodes, plus each
- * non-formatting child node itself. Formatting children (the `==` marks) are
- * excluded so classes never land on hidden zero-visual elements.
+ *   formatting-highlight  @29-31   "=="
+ *   highlight             @31-36   "a "
+ *   formatting-strong     @36-38   "**"   (also carries "highlight"!)
+ *   highlight-strong      @38-49   "b"
+ *   formatting-strong     @49-51   "**"
+ *   highlight             @51-57   " c"
+ *   formatting-highlight  @57-59   "=="
+ *
+ * Two highlights only count as separate runs when a gap between highlight
+ * nodes exists (e.g. the plain text between `==a== ==b==`).
  */
-function contentSegments(node: SyntaxNode): { from: number; to: number }[] {
-	const segments: { from: number; to: number }[] = [];
-	let pos = node.from;
+interface HighlightRun {
+	from: number;
+	to: number;
+	/** End of the first non-formatting content node. */
+	firstContentTo: number | null;
+	/** Start of the last non-formatting content node. */
+	lastContentFrom: number | null;
+}
 
-	for (let child = node.firstChild; child; child = child.nextSibling) {
-		// Text run before this child (only when non-empty).
-		if (child.from > pos) {
-			segments.push({ from: pos, to: child.from });
-		}
-		// Non-formatting children (strong, em, links, ...) are content
-		// segments of their own; formatting marks are skipped.
-		if (child.to > child.from && !child.name.toLowerCase().includes("formatting")) {
-			segments.push({ from: child.from, to: child.to });
-		}
-		pos = Math.max(pos, child.to);
-	}
-	// Trailing text run after the last child.
-	if (node.to > pos) {
-		segments.push({ from: pos, to: node.to });
-	}
+function hasHighlight(name: string): boolean {
+	return name.toLowerCase().includes("highlight");
+}
 
-	return segments;
+function isFormatting(name: string): boolean {
+	return name.toLowerCase().includes("formatting");
+}
+
+function collectRuns(rootFrom: number, rootTo: number, view: EditorView): HighlightRun[] {
+	const runs: HighlightRun[] = [];
+	let run: HighlightRun | null = null;
+
+	syntaxTree(view.state).iterate({
+		from: rootFrom,
+		to: rootTo,
+		enter: (node: SyntaxNodeRef) => {
+			if (!hasHighlight(node.name)) {
+				return;
+			}
+
+			// Continue the current run only if this node attaches seamlessly.
+			if (run && node.from <= run.to) {
+				run.to = Math.max(run.to, node.to);
+			} else {
+				run = { from: node.from, to: node.to, firstContentTo: null, lastContentFrom: null };
+				runs.push(run);
+			}
+
+			if (!isFormatting(node.name)) {
+				if (run.firstContentTo === null) {
+					run.firstContentTo = node.to;
+				}
+				run.lastContentFrom = node.from;
+			}
+		},
+	});
+
+	return runs;
 }
 
 function buildHighlightDecorations(view: EditorView): DecorationSet {
 	const builder = new RangeSetBuilder<Decoration>();
 
 	for (const { from, to } of view.visibleRanges) {
-		syntaxTree(view.state).iterate({
-			from,
-			to,
-			enter: (node) => {
-				// TODO: remove — temporary debug logging to discover the
-				// actual node names Obsidian's tree uses.
-				debugLogNodeName(node.name);
+		for (const run of collectRuns(from, to, view)) {
+			const { firstContentTo, lastContentFrom } = run;
 
-				if (!isHighlightNode(node.name)) {
-					return;
-				}
+			if (firstContentTo === null || lastContentFrom === null) {
+				// No visible content (e.g. `====`) — style the whole run.
+				builder.add(run.from, run.to, decoSingle);
+			} else if (firstContentTo >= lastContentFrom) {
+				// Single content segment: one element with both rounded ends.
+				builder.add(run.from, run.to, decoSingle);
+			} else {
+				// start: leading `==` + first content segment
+				builder.add(run.from, firstContentTo, decoStart);
+				// middle: inner formatting (`**`) + inner content segments
+				builder.add(firstContentTo, lastContentFrom, decoMiddle);
+				// end: last content segment + trailing `==`
+				builder.add(lastContentFrom, run.to, decoEnd);
+			}
 
-				const segments = contentSegments(node.node);
-				const count = segments.length;
-				for (let i = 0; i < count; i++) {
-					const { from, to } = segments[i];
-					let deco: Decoration;
-					if (count === 1) {
-						deco = decoSingle;
-					} else if (i === 0) {
-						deco = decoStart;
-					} else if (i === count - 1) {
-						deco = decoEnd;
-					} else {
-						deco = decoMiddle;
-					}
-					// RangeSetBuilder requires additions sorted by from,
-					// which holds: segments are in document order and we
-					// never descend into a processed highlight node.
-					builder.add(from, to, deco);
-				}
-
-				// Nested highlight nodes inside this one are already covered
-				// by the segments above.
-				return false;
-			},
-		});
+			// TODO: remove — temporary debug logging, one line per run.
+			debugLogRun(run, firstContentTo, lastContentFrom);
+		}
 	}
 
 	return builder.finish();
+}
+
+// TODO: remove — temporary debug logging. Each run is logged once per session.
+const loggedRuns = new Set<string>();
+function debugLogRun(
+	run: HighlightRun,
+	firstContentTo: number | null,
+	lastContentFrom: number | null,
+): void {
+	const key = `${run.from}-${run.to}`;
+	if (!loggedRuns.has(key)) {
+		loggedRuns.add(key);
+		console.log(
+			`[uimprove] run @${run.from}-${run.to}`,
+			`start …${firstContentTo}`,
+			`middle ${firstContentTo}…${lastContentFrom}`,
+			`end ${lastContentFrom}…`,
+		);
+	}
 }
 
 export const highlightFixPlugin = ViewPlugin.fromClass(
