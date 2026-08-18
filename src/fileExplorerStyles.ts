@@ -1,4 +1,4 @@
-import { type App, Menu, Modal, Setting, TFile, TFolder } from "obsidian";
+import { type App, Menu, Modal, Setting, TextComponent, TFile, TFolder } from "obsidian";
 import type UImprovePlugin from "./main";
 
 /**
@@ -66,6 +66,43 @@ function isStyleActive(style: Partial<FileExplorerStyle>): boolean {
 		col(style.titleTextColor).length > 0 ||
 		col(style.contentTextColor).length > 0
 	);
+}
+
+/**
+ * Resolves any CSS color string — named colors, rgb()/hsl(), hex, and even
+ * var() references (the probe lives in Obsidian's DOM, where theme
+ * variables resolve) — into hex + alpha for the swatch preview. Returns
+ * null for values the browser rejects.
+ */
+function resolveCssColor(
+	value: string,
+	scope: HTMLElement,
+): { hex: string; alpha: number } | null {
+	const probe = createEl("span");
+	probe.style.display = "none";
+	scope.appendChild(probe);
+	try {
+		probe.style.color = "";
+		probe.style.color = value;
+		if (!probe.style.color) {
+			return null; // invalid value — assignment was rejected
+		}
+		const m = getComputedStyle(probe).color.match(/rgba?\(([^)]+)\)/);
+		if (!m) {
+			return null;
+		}
+		const parts = m[1].split(",").map((p) => parseFloat(p));
+		const hex =
+			"#" +
+			parts
+				.slice(0, 3)
+				.map((n) => Math.round(n).toString(16).padStart(2, "0"))
+				.join("");
+		const alpha = parts.length > 3 && !Number.isNaN(parts[3]) ? parts[3] : 1;
+		return { hex, alpha };
+	} finally {
+		probe.remove();
+	}
 }
 
 /** Escapes a path for use inside a double-quoted CSS attribute selector. */
@@ -267,18 +304,73 @@ class FileExplorerStyleModal extends Modal {
 			desc: string,
 			key: keyof FileExplorerStyle,
 		): void => {
-			new Setting(this.contentEl)
+			let textField: TextComponent | null = null;
+			const setting = new Setting(this.contentEl)
 				.setName(name)
 				.setDesc(desc)
-				.addText((text) =>
+				.addText((text) => {
+					textField = text;
 					text
 						.setPlaceholder("azure, #ff8800, rgba(…), var(--color-accent)")
 						.setValue(this.value[key] as string)
 						.onChange((v) => {
 							(this.value[key] as string) = v;
 							this.preview();
-						}),
-				);
+							syncPreview(v);
+						});
+				});
+
+			// Convenience swatch + alpha slider. The text field stays the
+			// source of truth — free-form values (var(), named colors, rgba)
+			// keep working; the swatch just writes (8-digit) hex into it.
+			let hex = "#000000";
+			let alpha = 1;
+
+			const swatch = createEl("input", { type: "color", value: hex });
+			swatch.style.cssText =
+				"width:2.1em;height:1.9em;padding:0;border:none;background:none;cursor:pointer;margin-left:6px";
+			setting.controlEl.appendChild(swatch);
+
+			const alphaSlider = createEl("input", {
+				type: "range",
+				value: String(alpha),
+				attr: { min: "0", max: "1", step: "0.05", title: "Opacity" },
+			});
+			alphaSlider.style.cssText =
+				"width:3.5em;margin-left:6px;cursor:pointer";
+			setting.controlEl.appendChild(alphaSlider);
+
+			/** Preview-only: reflects any resolvable CSS color in swatch/slider. */
+			const syncPreview = (value: string): void => {
+				const resolved = resolveCssColor(value, this.contentEl);
+				if (!resolved) {
+					return; // invalid/incomplete input — keep last preview
+				}
+				hex = resolved.hex;
+				alpha = resolved.alpha;
+				swatch.value = hex;
+				alphaSlider.value = String(alpha);
+			};
+			syncPreview(col(this.value[key]));
+
+			const apply = (): void => {
+				const a = Math.round(alpha * 255)
+					.toString(16)
+					.padStart(2, "0");
+				const v = alpha >= 1 ? hex : hex + a;
+				(this.value[key] as string) = v;
+				textField?.setValue(v);
+				this.preview();
+			};
+
+			swatch.addEventListener("input", () => {
+				hex = swatch.value;
+				apply(); // keeps the current alpha when picking a new hue
+			});
+			alphaSlider.addEventListener("input", () => {
+				alpha = parseFloat(alphaSlider.value);
+				apply();
+			});
 		};
 
 		colorField(
