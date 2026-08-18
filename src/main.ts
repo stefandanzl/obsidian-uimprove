@@ -10,6 +10,11 @@ import {
 	applyFileExplorerFix,
 	deactivateFileExplorerFix,
 } from "./fileExplorerFix";
+import {
+	applyFileExplorerStyles,
+	registerFileExplorerStyleMenu,
+	removeFileExplorerStyles,
+} from "./fileExplorerStyles";
 import UImproveSettingTab from "./settings";
 import { DEFAULT_SETTINGS, type UImproveSettings } from "./settings";
 
@@ -27,10 +32,17 @@ export default class UImprovePlugin extends Plugin {
 
 		// File explorer indent fix
 		this.applyFileExplorerFix();
+
+		// File & folder styles (context menu + injected CSS)
+		this.registerFileExplorerStyleMenu();
+		this.applyFileExplorerStyles();
 	}
 
 	onunload() {
 		deactivateFileExplorerFix();
+		// Manually injected <style> elements outlive the plugin otherwise.
+		removeHighlightFixStyles();
+		removeFileExplorerStyles();
 	}
 
 	/** Applies the highlight fix toggle: shared state + injected styles. */
@@ -46,6 +58,16 @@ export default class UImprovePlugin extends Plugin {
 	/** Applies the file explorer fix toggle: shared state + patches. */
 	applyFileExplorerFix(): void {
 		applyFileExplorerFix(this);
+	}
+
+	/** Applies the folder styles toggle: injected styles. */
+	applyFileExplorerStyles(): void {
+		applyFileExplorerStyles(this);
+	}
+
+	/** Registers the explorer context-menu entry for folder styling. */
+	registerFileExplorerStyleMenu(): void {
+		registerFileExplorerStyleMenu(this);
 	}
 
 	async saveSettings(): Promise<void> {

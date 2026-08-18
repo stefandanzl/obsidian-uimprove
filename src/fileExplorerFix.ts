@@ -62,12 +62,22 @@ function wrapStripping(
  * Folder and file items sit on different prototypes — every prototype in
  * the chain that carries a relevant method gets the wrapper. Prototypes are
  * shared by every explorer view, so panes mounted later are covered too.
+ *
+ * Work is O(item classes), not O(items): once an item's direct prototype
+ * has been seen, its whole chain has been processed (ancestors are shared),
+ * so every further item of that class is a single Set lookup and a skip.
  */
 function bindExplorerView(view: FileExplorerViewLike): void {
+	const visited = new Set<object>();
 	for (const key of Object.keys(view.fileItems ?? {})) {
 		const item = view.fileItems![key];
-		let proto: object | null = Object.getPrototypeOf(item);
+		const direct: object | null = Object.getPrototypeOf(item);
+		if (direct === null || visited.has(direct)) {
+			continue;
+		}
+		let proto: object | null = direct;
 		while (proto && proto !== Object.prototype) {
+			visited.add(proto);
 			if (!patchedProtos.has(proto)) {
 				const patch: Record<string, (old: never) => unknown> = {};
 				const candidates = proto as Record<string, unknown>;
