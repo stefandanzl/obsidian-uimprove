@@ -6,15 +6,18 @@ import {
 	injectHighlightFixStyles,
 	removeHighlightFixStyles,
 } from "./highlightFixPlugin";
-import {
-	applyFileExplorerFix,
-	deactivateFileExplorerFix,
-} from "./fileExplorerFix";
+import { applyFileExplorerFix, deactivateFileExplorerFix } from "./fileExplorerFix";
 import {
 	applyFileExplorerStyles,
 	registerFileExplorerStyleMenu,
 	removeFileExplorerStyles,
 } from "./fileExplorerStyles";
+import {
+	headingSeparatorPlugin,
+	headingSeparatorPostProcessor,
+	injectHeadingSeparatorStyles,
+	removeHeadingSeparatorStyles,
+} from "./headingSeparators";
 import UImproveSettingTab from "./settings";
 import { DEFAULT_SETTINGS, type UImproveSettings } from "./settings";
 
@@ -36,6 +39,8 @@ export default class UImprovePlugin extends Plugin {
 		// File & folder styles (context menu + injected CSS)
 		this.registerFileExplorerStyleMenu();
 		this.applyFileExplorerStyles();
+
+		this.applyHeadingSeparators();
 	}
 
 	onunload() {
@@ -43,6 +48,7 @@ export default class UImprovePlugin extends Plugin {
 		// Manually injected <style> elements outlive the plugin otherwise.
 		removeHighlightFixStyles();
 		removeFileExplorerStyles();
+		removeHeadingSeparatorStyles();
 	}
 
 	/** Applies the highlight fix toggle: shared state + injected styles. */
@@ -68,6 +74,15 @@ export default class UImprovePlugin extends Plugin {
 	/** Registers the explorer context-menu entry for folder styling. */
 	registerFileExplorerStyleMenu(): void {
 		registerFileExplorerStyleMenu(this);
+	}
+
+	applyHeadingSeparators(): void {
+		injectHeadingSeparatorStyles();
+		// 2. Editor Extension für Live Preview einhängen
+		this.registerEditorExtension([headingSeparatorPlugin]);
+
+		// 3. Markdown Post Processor für Reading View einhängen
+		this.registerMarkdownPostProcessor(headingSeparatorPostProcessor);
 	}
 
 	async saveSettings(): Promise<void> {

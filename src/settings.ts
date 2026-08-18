@@ -11,6 +11,8 @@ export interface UImproveSettings {
 	fileExplorerStylesEnabled: boolean;
 	/** vault path -> style of that file/folder (non-recursive). */
 	fileExplorerStyles: Record<string, FileExplorerStyle>;
+	/** Headings with only dashes (# ---) render as separator lines. */
+	headingSeparatorEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: UImproveSettings = {
@@ -18,6 +20,7 @@ export const DEFAULT_SETTINGS: UImproveSettings = {
 	fileExplorerFixEnabled: true,
 	fileExplorerStylesEnabled: true,
 	fileExplorerStyles: {},
+	headingSeparatorEnabled: true,
 };
 
 export default class UImproveSettingTab extends PluginSettingTab {
@@ -77,6 +80,22 @@ export default class UImproveSettingTab extends PluginSettingTab {
 						this.plugin.settings.fileExplorerStylesEnabled = value;
 						await this.plugin.saveSettings();
 						this.plugin.applyFileExplorerStyles();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Heading separators")
+			.setDesc(
+				"Headings whose text is only dashes (# ---, ## -----, …) render as " +
+					"separator lines in their heading level's color.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.headingSeparatorEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.headingSeparatorEnabled = value;
+						await this.plugin.saveSettings();
+						this.plugin.applyHeadingSeparators();
 					}),
 			);
 	}
