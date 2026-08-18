@@ -35,6 +35,7 @@ The color is a CSS variable so it can be overridden per theme or vault.
 .cm-s-obsidian .uimprove-highlight-start {
 	border-top-left-radius: var(--uimprove-highlight-radius);
 	border-bottom-left-radius: var(--uimprove-highlight-radius);
+	padding-left: 8px;
 }
 
 .cm-s-obsidian .uimprove-highlight-middle {
@@ -44,6 +45,7 @@ The color is a CSS variable so it can be overridden per theme or vault.
 .cm-s-obsidian .uimprove-highlight-end {
 	border-top-right-radius: var(--uimprove-highlight-radius);
 	border-bottom-right-radius: var(--uimprove-highlight-radius);
+	padding-right: 8px;
 }
 
 /* Reading view: the <mark> element is continuous, so it only needs the
@@ -52,4 +54,9 @@ paint + radius (start and end classes coincide on it). */
 .markdown-rendered mark.uimprove-highlight-start {
 	background-color: var(--uimprove-highlight-bg);
 	/* border-radius: var(--uimprove-highlight-radius); */
+}
+
+/* Verpasst den '==' beim Fokus denselben Hintergrund */
+span.cm-formatting.cm-formatting-highlight.cm-highlight {
+	background-color: var(--uimprove-highlight-bg);
 }

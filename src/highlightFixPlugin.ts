@@ -18,29 +18,17 @@ const decoSingle = Decoration.mark({
 	class: "uimprove-highlight-start uimprove-highlight-end",
 });
 
-/**
- * In Obsidian's tree, a visual highlight `==a **b** c==` is NOT one node with
- * children — it is a contiguous run of sibling nodes that all carry
- * "highlight" in their name:
- *
- *   formatting-highlight  @29-31   "=="
- *   highlight             @31-36   "a "
- *   formatting-strong     @36-38   "**"   (also carries "highlight"!)
- *   highlight-strong      @38-49   "b"
- *   formatting-strong     @49-51   "**"
- *   highlight             @51-57   " c"
- *   formatting-highlight  @57-59   "=="
- *
- * Two highlights only count as separate runs when a gap between highlight
- * nodes exists (e.g. the plain text between `==a== ==b==`).
- */
 interface HighlightRun {
 	from: number;
 	to: number;
+	/** Start of the first non-formatting content node. */
+	firstContentFrom: number | null;
 	/** End of the first non-formatting content node. */
 	firstContentTo: number | null;
 	/** Start of the last non-formatting content node. */
 	lastContentFrom: number | null;
+	/** End of the last non-formatting content node. */
+	lastContentTo: number | null;
 }
 
 function hasHighlight(name: string): boolean {
@@ -67,15 +55,24 @@ function collectRuns(rootFrom: number, rootTo: number, view: EditorView): Highli
 			if (run && node.from <= run.to) {
 				run.to = Math.max(run.to, node.to);
 			} else {
-				run = { from: node.from, to: node.to, firstContentTo: null, lastContentFrom: null };
+				run = {
+					from: node.from,
+					to: node.to,
+					firstContentFrom: null,
+					firstContentTo: null,
+					lastContentFrom: null,
+					lastContentTo: null,
+				};
 				runs.push(run);
 			}
 
 			if (!isFormatting(node.name)) {
-				if (run.firstContentTo === null) {
+				if (run.firstContentFrom === null) {
+					run.firstContentFrom = node.from;
 					run.firstContentTo = node.to;
 				}
 				run.lastContentFrom = node.from;
+				run.lastContentTo = node.to;
 			}
 		},
 	});
@@ -88,21 +85,28 @@ function buildHighlightDecorations(view: EditorView): DecorationSet {
 
 	for (const { from, to } of view.visibleRanges) {
 		for (const run of collectRuns(from, to, view)) {
-			const { firstContentTo, lastContentFrom } = run;
+			const { firstContentFrom, firstContentTo, lastContentFrom, lastContentTo } = run;
 
-			if (firstContentTo === null || lastContentFrom === null) {
-				// No visible content (e.g. `====`) — style the whole run.
-				builder.add(run.from, run.to, decoSingle);
-			} else if (firstContentTo >= lastContentFrom) {
-				// Single content segment: one element with both rounded ends.
-				builder.add(run.from, run.to, decoSingle);
+			// Abbrechen, wenn kein verwertbarer Inhaltsknoten existiert (z.B. `====`)
+			if (!firstContentFrom || !firstContentTo || !lastContentFrom || !lastContentTo) {
+				console.log("!firstContentTo || !lastContentFrom");
+				continue;
+			}
+
+			if (firstContentTo >= lastContentFrom) {
+				// Einziges Textsegment: Das gesamte Element bekommt -start UND -end
+				builder.add(firstContentFrom, lastContentTo, decoSingle);
 			} else {
-				// start: leading `==` + first content segment
-				builder.add(run.from, firstContentTo, decoStart);
-				// middle: inner formatting (`**`) + inner content segments
-				builder.add(firstContentTo, lastContentFrom, decoMiddle);
-				// end: last content segment + trailing `==`
-				builder.add(lastContentFrom, run.to, decoEnd);
+				// 1. Erstes Textsegment bekommt -start (== bleiben eckig)
+				builder.add(firstContentFrom, firstContentTo, decoStart);
+
+				// 2. Mittlerer Teil bekommt -middle
+				if (firstContentTo < lastContentFrom) {
+					builder.add(firstContentTo, lastContentFrom, decoMiddle);
+				}
+
+				// 3. Letztes Textsegment bekommt -end (== bleiben eckig)
+				builder.add(lastContentFrom, lastContentTo, decoEnd);
 			}
 
 			// TODO: remove — temporary debug logging, one line per run.
@@ -115,11 +119,7 @@ function buildHighlightDecorations(view: EditorView): DecorationSet {
 
 // TODO: remove — temporary debug logging. Each run is logged once per session.
 const loggedRuns = new Set<string>();
-function debugLogRun(
-	run: HighlightRun,
-	firstContentTo: number | null,
-	lastContentFrom: number | null,
-): void {
+function debugLogRun(run: HighlightRun, firstContentTo: number | null, lastContentFrom: number | null): void {
 	const key = `${run.from}-${run.to}`;
 	if (!loggedRuns.has(key)) {
 		loggedRuns.add(key);
