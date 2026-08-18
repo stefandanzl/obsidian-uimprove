@@ -1,62 +1,6 @@
 /*
 
-Highlight continuity fix (Live Preview + Reading view)
-
-`==a **b** c==` renders as multiple separate highlight boxes because of the
-inline formatting in between. CodeMirror never merges mark decorations from
-different sources onto one element, so uimprove paints its own continuous
-highlight over the whole run and disables the native boxes:
-
-- .uimprove-highlight-start : leading `==` + first content segment (rounded left)
-- .uimprove-highlight-middle: inner formatting (`**`) + inner segments
-- .uimprove-highlight-end   : last content segment + trailing `==` (rounded right)
-
-The color is a CSS variable so it can be overridden per theme or vault.
+The highlight fix styles live in src/highlightFixPlugin.ts and are injected
+as a <style> element only while the feature is enabled in settings.
 
 */
-
-:root {
-	--uimprove-highlight-bg: rgba(196, 41, 118, 0.774);
-	--uimprove-highlight-radius: 0.5em;
-}
-
-/* Editor (Live Preview): disable the native, square highlight boxes … */
-.cm-s-obsidian span.cm-highlight {
-	background-color: transparent;
-}
-
-/* … and paint our own continuous one. */
-.cm-s-obsidian .uimprove-highlight-start,
-.cm-s-obsidian .uimprove-highlight-middle,
-.cm-s-obsidian .uimprove-highlight-end {
-	background-color: var(--uimprove-highlight-bg);
-}
-
-.cm-s-obsidian .uimprove-highlight-start {
-	border-top-left-radius: var(--uimprove-highlight-radius);
-	border-bottom-left-radius: var(--uimprove-highlight-radius);
-	padding-left: 8px;
-}
-
-.cm-s-obsidian .uimprove-highlight-middle {
-	border-radius: 0;
-}
-
-.cm-s-obsidian .uimprove-highlight-end {
-	border-top-right-radius: var(--uimprove-highlight-radius);
-	border-bottom-right-radius: var(--uimprove-highlight-radius);
-	padding-right: 8px;
-}
-
-/* Reading view: the <mark> element is continuous, so it only needs the
-paint + radius (start and end classes coincide on it). */
-.markdown-preview-view mark.uimprove-highlight-start,
-.markdown-rendered mark.uimprove-highlight-start {
-	background-color: var(--uimprove-highlight-bg);
-	/* border-radius: var(--uimprove-highlight-radius); */
-}
-
-/* Verpasst den '==' beim Fokus denselben Hintergrund */
-span.cm-formatting.cm-formatting-highlight.cm-highlight {
-	background-color: var(--uimprove-highlight-bg);
-}

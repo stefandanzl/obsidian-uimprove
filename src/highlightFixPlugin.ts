@@ -1,6 +1,6 @@
 import { syntaxTree } from "@codemirror/language";
 import type { SyntaxNodeRef } from "@lezer/common";
-import { RangeSetBuilder } from "@codemirror/state";
+import { RangeSet, RangeSetBuilder } from "@codemirror/state";
 import {
 	Decoration,
 	type DecorationSet,
@@ -17,6 +17,82 @@ const decoEnd = Decoration.mark({ class: "uimprove-highlight-end" });
 const decoSingle = Decoration.mark({
 	class: "uimprove-highlight-start uimprove-highlight-end",
 });
+
+/**
+ * Live toggle state, kept in a shared object so the ViewPlugin, the reading
+ * view post-processor and the style injection all consult the same source.
+ */
+export const highlightFixState = { enabled: true };
+
+const STYLE_ID = "uimprove-highlight-fix-styles";
+
+/** The highlight fix CSS, injected as a <style> element only while enabled. */
+const HIGHLIGHT_FIX_CSS = `
+:root {
+	--uimprove-highlight-bg: rgba(196, 41, 118, 0.774);
+	--uimprove-highlight-radius: 0.5em;
+}
+
+/* Editor (Live Preview): disable the native, square highlight boxes … */
+.cm-s-obsidian span.cm-highlight {
+	background-color: transparent;
+}
+
+/* … and paint our own continuous one. */
+.cm-s-obsidian .uimprove-highlight-start,
+.cm-s-obsidian .uimprove-highlight-middle,
+.cm-s-obsidian .uimprove-highlight-end {
+	background-color: var(--uimprove-highlight-bg);
+}
+
+.cm-s-obsidian .uimprove-highlight-start {
+	border-top-left-radius: var(--uimprove-highlight-radius);
+	border-bottom-left-radius: var(--uimprove-highlight-radius);
+	padding-left: 8px;
+
+}
+
+.cm-s-obsidian .uimprove-highlight-middle {
+	border-radius: 0;
+}
+
+.cm-s-obsidian .uimprove-highlight-end {
+	border-top-right-radius: var(--uimprove-highlight-radius);
+	border-bottom-right-radius: var(--uimprove-highlight-radius);
+	padding-right: 8px;
+}
+
+/* Reading view: the <mark> element is continuous, so it only needs the
+paint + radius (start and end classes coincide on it). */
+.markdown-preview-view mark.uimprove-highlight-start,
+.markdown-rendered mark.uimprove-highlight-start {
+	background-color: var(--uimprove-highlight-bg);
+	border-radius: var(--uimprove-highlight-radius);
+}
+
+.cm-s-obsidian span.cm-formatting.cm-formatting-highlight.cm-highlight {
+	border: none;
+	border-radius: 0 !important;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+	background-color: var(--uimprove-highlight-bg);
+
+}
+`;
+
+export function injectHighlightFixStyles(): void {
+	if (document.getElementById(STYLE_ID)) {
+		return;
+	}
+	const el = document.createElement("style");
+	el.id = STYLE_ID;
+	el.textContent = HIGHLIGHT_FIX_CSS;
+	document.head.appendChild(el);
+}
+
+export function removeHighlightFixStyles(): void {
+	document.getElementById(STYLE_ID)?.remove();
+}
 
 interface HighlightRun {
 	from: number;
@@ -81,6 +157,10 @@ function collectRuns(rootFrom: number, rootTo: number, view: EditorView): Highli
 }
 
 function buildHighlightDecorations(view: EditorView): DecorationSet {
+	if (!highlightFixState.enabled) {
+		return RangeSet.empty;
+	}
+
 	const builder = new RangeSetBuilder<Decoration>();
 
 	for (const { from, to } of view.visibleRanges) {
@@ -157,6 +237,9 @@ export const highlightFixPlugin = ViewPlugin.fromClass(
  * classes just let the same CSS selectors style both editor and reading view.
  */
 export function highlightPostProcessor(el: HTMLElement): void {
+	if (!highlightFixState.enabled) {
+		return;
+	}
 	for (const mark of Array.from(el.querySelectorAll("mark"))) {
 		mark.classList.add("uimprove-highlight-start", "uimprove-highlight-end");
 	}

@@ -1,12 +1,38 @@
 import { Plugin } from "obsidian";
-import { highlightFixPlugin, highlightPostProcessor } from "./highlightFixPlugin";
+import {
+	highlightFixPlugin,
+	highlightFixState,
+	highlightPostProcessor,
+	injectHighlightFixStyles,
+	removeHighlightFixStyles,
+} from "./highlightFixPlugin";
+import UImproveSettingTab from "./settings";
+import { DEFAULT_SETTINGS, type UImproveSettings } from "./settings";
 
 export default class UImprovePlugin extends Plugin {
-	async onload() {
-		// Highlight start/end classes (Live Preview)
-		this.registerEditorExtension(highlightFixPlugin);
+	declare settings: UImproveSettings;
 
-		// Highlight start/end classes (Reading view)
+	async onload() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.addSettingTab(new UImproveSettingTab(this.app, this));
+
+		// Highlight start/end classes (Live Preview + Reading view)
+		this.registerEditorExtension(highlightFixPlugin);
 		this.registerMarkdownPostProcessor(highlightPostProcessor);
+		this.applyHighlightFix();
+	}
+
+	/** Applies the highlight fix toggle: shared state + injected styles. */
+	applyHighlightFix(): void {
+		highlightFixState.enabled = this.settings.highlightFixEnabled;
+		if (highlightFixState.enabled) {
+			injectHighlightFixStyles();
+		} else {
+			removeHighlightFixStyles();
+		}
+	}
+
+	async saveSettings(): Promise<void> {
+		await this.saveData(this.settings);
 	}
 }
