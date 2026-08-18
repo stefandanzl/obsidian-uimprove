@@ -1,6 +1,6 @@
 {
 	"name": "uimprove",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Collection of UI improvements for Obsidian to enhance native elements and layout functionality.",
 	"main": "main.js",
 	"scripts": {

@@ -1,7 +1,7 @@
 {
 	"id": "uimprove",
 	"name": "UImprove",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"minAppVersion": "1.12.0",
 	"description": "Collection of UI improvements for Obsidian to enhance native elements and layout functionality.",
 	"author": "Stefan Danzl",
