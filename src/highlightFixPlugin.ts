@@ -169,7 +169,6 @@ function buildHighlightDecorations(view: EditorView): DecorationSet {
 
 			// Abbrechen, wenn kein verwertbarer Inhaltsknoten existiert (z.B. `====`)
 			if (!firstContentFrom || !firstContentTo || !lastContentFrom || !lastContentTo) {
-				console.log("!firstContentTo || !lastContentFrom");
 				continue;
 			}
 
@@ -188,28 +187,10 @@ function buildHighlightDecorations(view: EditorView): DecorationSet {
 				// 3. Letztes Textsegment bekommt -end (== bleiben eckig)
 				builder.add(lastContentFrom, lastContentTo, decoEnd);
 			}
-
-			// TODO: remove — temporary debug logging, one line per run.
-			debugLogRun(run, firstContentTo, lastContentFrom);
 		}
 	}
 
 	return builder.finish();
-}
-
-// TODO: remove — temporary debug logging. Each run is logged once per session.
-const loggedRuns = new Set<string>();
-function debugLogRun(run: HighlightRun, firstContentTo: number | null, lastContentFrom: number | null): void {
-	const key = `${run.from}-${run.to}`;
-	if (!loggedRuns.has(key)) {
-		loggedRuns.add(key);
-		console.log(
-			`[uimprove] run @${run.from}-${run.to}`,
-			`start …${firstContentTo}`,
-			`middle ${firstContentTo}…${lastContentFrom}`,
-			`end ${lastContentFrom}…`,
-		);
-	}
 }
 
 export const highlightFixPlugin = ViewPlugin.fromClass(
