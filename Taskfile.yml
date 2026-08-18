@@ -13,11 +13,11 @@ vars:
   # It will build, copy to your testing vault and reload Obsidian app
   #
   # PLACEHOLDER VALUES:
-  PLUGIN_ID: plugin-template
-  PLUGIN_NAME: Plugin Template
-  PLUGIN_DESCRIPTION: A template for creating Obsidian plugins
-  AUTHOR_NAME: # Stefan Danzl
-  AUTHOR_URL: # https://github.com/stefandanzl
+  PLUGIN_ID: uimprove
+  PLUGIN_NAME: UImprove
+  PLUGIN_DESCRIPTION: Collection of UI improvements for Obsidian to enhance native elements and layout functionality.
+  AUTHOR_NAME: Stefan Danzl
+  AUTHOR_URL: https://github.com/stefandanzl
   ##########################################################################################
   #
   DIR_PLUGIN: "{{.VAULTS_DIR}}/{{.VAULT_NAME}}/.obsidian/plugins/{{.PLUGIN_ID}}"
