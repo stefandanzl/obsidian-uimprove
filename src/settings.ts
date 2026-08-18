@@ -4,10 +4,13 @@ import type UImprovePlugin from "./main";
 export interface UImproveSettings {
 	/** Rounded continuous highlights (==...== start/middle/end classes). */
 	highlightFixEnabled: boolean;
+	/** Strips Obsidian's inline indent compensation from file explorer rows. */
+	fileExplorerFixEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: UImproveSettings = {
 	highlightFixEnabled: true,
+	fileExplorerFixEnabled: true,
 };
 
 export default class UImproveSettingTab extends PluginSettingTab {
@@ -35,6 +38,22 @@ export default class UImproveSettingTab extends PluginSettingTab {
 						this.plugin.settings.highlightFixEnabled = value;
 						await this.plugin.saveSettings();
 						this.plugin.applyHighlightFix();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("File explorer indent fix")
+			.setDesc(
+				"Removes the inline margin/padding compensation from folder and file rows, " +
+					"handing indentation control back to CSS.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.fileExplorerFixEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.fileExplorerFixEnabled = value;
+						await this.plugin.saveSettings();
+						this.plugin.applyFileExplorerFix();
 					}),
 			);
 	}

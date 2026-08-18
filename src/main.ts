@@ -6,6 +6,10 @@ import {
 	injectHighlightFixStyles,
 	removeHighlightFixStyles,
 } from "./highlightFixPlugin";
+import {
+	applyFileExplorerFix,
+	deactivateFileExplorerFix,
+} from "./fileExplorerFix";
 import UImproveSettingTab from "./settings";
 import { DEFAULT_SETTINGS, type UImproveSettings } from "./settings";
 
@@ -20,6 +24,13 @@ export default class UImprovePlugin extends Plugin {
 		this.registerEditorExtension(highlightFixPlugin);
 		this.registerMarkdownPostProcessor(highlightPostProcessor);
 		this.applyHighlightFix();
+
+		// File explorer indent fix
+		this.applyFileExplorerFix();
+	}
+
+	onunload() {
+		deactivateFileExplorerFix();
 	}
 
 	/** Applies the highlight fix toggle: shared state + injected styles. */
@@ -30,6 +41,11 @@ export default class UImprovePlugin extends Plugin {
 		} else {
 			removeHighlightFixStyles();
 		}
+	}
+
+	/** Applies the file explorer fix toggle: shared state + patches. */
+	applyFileExplorerFix(): void {
+		applyFileExplorerFix(this);
 	}
 
 	async saveSettings(): Promise<void> {
