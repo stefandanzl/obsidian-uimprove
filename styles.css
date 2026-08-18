@@ -2,54 +2,47 @@
 
 Highlight continuity fix (Live Preview + Reading view)
 
-`==a **b** c==` renders as multiple separate highlight boxes because of the
-inline formatting in between. CodeMirror never merges mark decorations from
-different sources onto one element, so uimprove paints its own continuous
-highlight over the whole run and disables the native boxes:
+`==a **b** c==` renders as multiple separate native highlight boxes because
+of the inline formatting in between. The plugin tags the first and last
+native span of each continuous run so CSS can round only the outer ends:
 
-- .uimprove-highlight-start : leading `==` + first content segment (rounded left)
-- .uimprove-highlight-middle: inner formatting (`**`) + inner segments
-- .uimprove-highlight-end   : last content segment + trailing `==` (rounded right)
+- .uimprove-highlight-start : first span of the run (rounded left)
+- .uimprove-highlight-end   : last span of the run (rounded right)
 
-The color is a CSS variable so it can be overridden per theme or vault.
+Middles stay untagged — the native highlight styling is already correct for
+them. The native background is untouched, so themes keep working.
 
 */
 
 :root {
-	--uimprove-highlight-bg: rgba(196, 41, 118, 0.774);
 	--uimprove-highlight-radius: 0.5em;
 }
 
-/* Editor (Live Preview): disable the native, square highlight boxes … */
-.cm-s-obsidian span.cm-highlight {
-	background-color: transparent;
-}
-
-/* … and paint our own continuous one. */
-.cm-s-obsidian .uimprove-highlight-start,
-.cm-s-obsidian .uimprove-highlight-middle,
-.cm-s-obsidian .uimprove-highlight-end {
-	background-color: var(--uimprove-highlight-bg);
-}
-
-.cm-s-obsidian .uimprove-highlight-start {
+/* Editor (Live Preview) */
+.cm-s-obsidian span.uimprove-highlight-start {
 	border-top-left-radius: var(--uimprove-highlight-radius);
 	border-bottom-left-radius: var(--uimprove-highlight-radius);
 }
 
-.cm-s-obsidian .uimprove-highlight-middle {
-	border-radius: 0;
-}
-
-.cm-s-obsidian .uimprove-highlight-end {
+.cm-s-obsidian span.uimprove-highlight-end {
 	border-top-right-radius: var(--uimprove-highlight-radius);
 	border-bottom-right-radius: var(--uimprove-highlight-radius);
 }
 
-/* Reading view: the <mark> element is continuous, so it only needs the
-paint + radius (start and end classes coincide on it). */
+/* Reading view: the <mark> element is continuous, start and end coincide */
 .markdown-preview-view mark.uimprove-highlight-start,
 .markdown-rendered mark.uimprove-highlight-start {
-	background-color: var(--uimprove-highlight-bg);
-	/* border-radius: var(--uimprove-highlight-radius); */
+	border-radius: var(--uimprove-highlight-radius);
 }
+
+/* Optional: custom highlight color for editor + reading view.
+:root {
+	--uimprove-highlight-bg: rgba(196, 41, 118, 0.774);
+}
+
+.cm-s-obsidian span.cm-highlight,
+.markdown-preview-view mark,
+.markdown-rendered mark {
+	background-color: var(--uimprove-highlight-bg);
+}
+*/

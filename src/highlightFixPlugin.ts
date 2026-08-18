@@ -1,153 +1,184 @@
-import { syntaxTree } from "@codemirror/language";
-import type { SyntaxNodeRef } from "@lezer/common";
-import { RangeSetBuilder } from "@codemirror/state";
 import {
-	Decoration,
-	type DecorationSet,
 	type EditorView,
 	ViewPlugin,
 	type ViewUpdate,
 } from "@codemirror/view";
 
-// Pre-instantiated decorations: Decoration.mark objects are immutable and
-// should be shared instead of recreated on every rebuild.
-const decoStart = Decoration.mark({ class: "uimprove-highlight-start" });
-const decoMiddle = Decoration.mark({ class: "uimprove-highlight-middle" });
-const decoEnd = Decoration.mark({ class: "uimprove-highlight-end" });
-const decoSingle = Decoration.mark({
-	class: "uimprove-highlight-start uimprove-highlight-end",
-});
-
 /**
- * In Obsidian's tree, a visual highlight `==a **b** c==` is NOT one node with
- * children — it is a contiguous run of sibling nodes that all carry
- * "highlight" in their name:
+ * Highlight continuity fix, DOM-pass edition.
  *
- *   formatting-highlight  @29-31   "=="
- *   highlight             @31-36   "a "
- *   formatting-strong     @36-38   "**"   (also carries "highlight"!)
- *   highlight-strong      @38-49   "b"
- *   formatting-strong     @49-51   "**"
- *   highlight             @51-57   " c"
- *   formatting-highlight  @57-59   "=="
+ * `==a **b** c==` renders as several separate native `span.cm-highlight`
+ * boxes (one per formatting run). CodeMirror never merges foreign
+ * Decoration.mark instances onto native spans — it nests new elements — so
+ * instead of decorating, we walk the finished DOM after each render and add
+ * positional classes directly to Obsidian's own spans:
  *
- * Two highlights only count as separate runs when a gap between highlight
- * nodes exists (e.g. the plain text between `==a== ==b==`).
+ *   <span class="cm-highlight uimprove-highlight-start">a </span>
+ *   <span class="cm-highlight cm-strong">b</span>
+ *   <span class="cm-highlight uimprove-highlight-end"> c</span>
+ *
+ * Visible `==` / `**` delimiter spans carry `cm-highlight` themselves and are
+ * ordinary run members; while the cursor is elsewhere they are widget-hidden
+ * and simply absent from the DOM, which puts the rounding at the content
+ * edges for free.
  */
-interface HighlightRun {
-	from: number;
-	to: number;
-	/** End of the first non-formatting content node. */
-	firstContentTo: number | null;
-	/** Start of the last non-formatting content node. */
-	lastContentFrom: number | null;
+
+const POSITION_CLASSES = ["uimprove-highlight-start", "uimprove-highlight-end"];
+
+const CLEANUP_SELECTOR = POSITION_CLASSES.map((c) => `.${c}`).join(", ");
+
+function applyHighlightClasses(view: EditorView): void {
+	// Obsidian replaces spans asynchronously and can detach nodes while this
+	// pass iterates its snapshot — never let that kill the whole pass
+	// silently (a thrown error here leaves runs untagged until the next
+	// editor update, which shows up as a visible flicker).
+	try {
+		applyHighlightClassesInner(view);
+	} catch (e) {
+		console.error("[uimprove] highlight pass failed:", e);
+	}
 }
 
-function hasHighlight(name: string): boolean {
-	return name.toLowerCase().includes("highlight");
-}
-
-function isFormatting(name: string): boolean {
-	return name.toLowerCase().includes("formatting");
-}
-
-function collectRuns(rootFrom: number, rootTo: number, view: EditorView): HighlightRun[] {
-	const runs: HighlightRun[] = [];
-	let run: HighlightRun | null = null;
-
-	syntaxTree(view.state).iterate({
-		from: rootFrom,
-		to: rootTo,
-		enter: (node: SyntaxNodeRef) => {
-			if (!hasHighlight(node.name)) {
-				return;
-			}
-
-			// Continue the current run only if this node attaches seamlessly.
-			if (run && node.from <= run.to) {
-				run.to = Math.max(run.to, node.to);
-			} else {
-				run = { from: node.from, to: node.to, firstContentTo: null, lastContentFrom: null };
-				runs.push(run);
-			}
-
-			if (!isFormatting(node.name)) {
-				if (run.firstContentTo === null) {
-					run.firstContentTo = node.to;
-				}
-				run.lastContentFrom = node.from;
-			}
-		},
-	});
-
-	return runs;
-}
-
-function buildHighlightDecorations(view: EditorView): DecorationSet {
-	const builder = new RangeSetBuilder<Decoration>();
-
-	for (const { from, to } of view.visibleRanges) {
-		for (const run of collectRuns(from, to, view)) {
-			const { firstContentTo, lastContentFrom } = run;
-
-			if (firstContentTo === null || lastContentFrom === null) {
-				// No visible content (e.g. `====`) — style the whole run.
-				builder.add(run.from, run.to, decoSingle);
-			} else if (firstContentTo >= lastContentFrom) {
-				// Single content segment: one element with both rounded ends.
-				builder.add(run.from, run.to, decoSingle);
-			} else {
-				// start: leading `==` + first content segment
-				builder.add(run.from, firstContentTo, decoStart);
-				// middle: inner formatting (`**`) + inner content segments
-				builder.add(firstContentTo, lastContentFrom, decoMiddle);
-				// end: last content segment + trailing `==`
-				builder.add(lastContentFrom, run.to, decoEnd);
-			}
-
-			// TODO: remove — temporary debug logging, one line per run.
-			debugLogRun(run, firstContentTo, lastContentFrom);
-		}
+function applyHighlightClassesInner(view: EditorView): void {
+	// Clean up the previous pass first. Queried by our own classes (not by
+	// .cm-highlight) so elements that lost their native class but kept ours
+	// are caught as well.
+	for (const el of Array.from(view.dom.querySelectorAll(CLEANUP_SELECTOR))) {
+		el.classList.remove(...POSITION_CLASSES);
 	}
 
-	return builder.finish();
+	const highlights = Array.from(
+		view.dom.querySelectorAll("span.cm-highlight"),
+	);
+	if (highlights.length === 0) {
+		return;
+	}
+
+	let run: Element[] = [];
+	for (let i = 0; i < highlights.length; i++) {
+		const current = highlights[i];
+		if (
+			run.length > 0 &&
+			isConsecutive(run[run.length - 1], current)
+		) {
+			run.push(current);
+		} else {
+			if (run.length > 0) {
+				tagRun(run);
+			}
+			run = [current];
+		}
+	}
+	if (run.length > 0) {
+		tagRun(run);
+	}
+}
+
+/**
+ * Whether two highlight spans belong to the same visual highlight: same line
+ * element, and nothing but widget buffers and non-highlight formatting spans
+ * between them. Any visible content in between — including a bare text node
+ * like the space in `==a== ==b==` — separates the runs.
+ */
+function isConsecutive(a: Element, b: Element): boolean {
+	// Either span may have been detached from the DOM between the
+	// querySelectorAll snapshot and this check — treat that as "not a run".
+	const parent = b.parentNode;
+	if (!parent || a.parentNode !== parent) {
+		return false;
+	}
+
+	const siblings = parent.childNodes;
+	let inGap = false;
+	for (let i = 0; i < siblings.length; i++) {
+		const node = siblings[i];
+		if (node === a) {
+			inGap = true;
+			continue;
+		}
+		if (node === b) {
+			return inGap;
+		}
+		if (!inGap) {
+			continue;
+		}
+		if (node.nodeType === Node.TEXT_NODE) {
+			// Text nodes between the spans mean visible characters —
+			// including the space between two separate highlights.
+			return false;
+		}
+		const el = node as Element;
+		if (
+			el.classList.contains("cm-widgetBuffer") ||
+			el.classList.contains("cm-formatting")
+		) {
+			continue;
+		}
+		// Empty placeholder elements (the contenteditable="false" spans
+		// Obsidian pairs with widget buffers) render nothing visible.
+		if (el.childElementCount === 0 && (el.textContent ?? "").length === 0) {
+			continue;
+		}
+		return false;
+	}
+	return false;
+}
+
+function tagRun(run: Element[]): void {
+	if (run.length === 1) {
+		run[0].classList.add(
+			"uimprove-highlight-start",
+			"uimprove-highlight-end",
+		);
+	} else {
+		run[0].classList.add("uimprove-highlight-start");
+		run[run.length - 1].classList.add("uimprove-highlight-end");
+		// Intermediate spans keep no positional class — their native
+		// .cm-highlight styling is already correct for run middles.
+	}
+
+	// TODO: remove — temporary debug logging, one line per distinct run.
+	debugLogRun(run);
 }
 
 // TODO: remove — temporary debug logging. Each run is logged once per session.
 const loggedRuns = new Set<string>();
-function debugLogRun(
-	run: HighlightRun,
-	firstContentTo: number | null,
-	lastContentFrom: number | null,
-): void {
-	const key = `${run.from}-${run.to}`;
-	if (!loggedRuns.has(key)) {
-		loggedRuns.add(key);
-		console.log(
-			`[uimprove] run @${run.from}-${run.to}`,
-			`start …${firstContentTo}`,
-			`middle ${firstContentTo}…${lastContentFrom}`,
-			`end ${lastContentFrom}…`,
-		);
+function debugLogRun(run: Element[]): void {
+	const text = run.map((el) => el.textContent ?? "").join("");
+	if (!loggedRuns.has(text)) {
+		loggedRuns.add(text);
+		console.log(`[uimprove] run (${run.length} spans): "${text}"`);
 	}
 }
 
 export const highlightFixPlugin = ViewPlugin.fromClass(
 	class {
-		decorations: DecorationSet;
+		private observer: MutationObserver;
 
 		constructor(view: EditorView) {
-			this.decorations = buildHighlightDecorations(view);
+			// Obsidian swaps some spans into the DOM asynchronously (e.g. the
+			// visible `==` / `**` delimiters when the cursor enters a
+			// highlight), after the update cycle has already run. Watching for
+			// span insertions/removals re-tags those late arrivals.
+			this.observer = new MutationObserver(() => applyHighlightClasses(view));
+			// childList only — classList changes are attribute mutations, so
+			// our own tagging cannot re-trigger the observer.
+			this.observer.observe(view.dom, { childList: true, subtree: true });
+
+			applyHighlightClasses(view);
 		}
 
 		update(update: ViewUpdate) {
-			if (update.docChanged || update.viewportChanged) {
-				this.decorations = buildHighlightDecorations(update.view);
-			}
+			// Runs on every update, synchronously within the update cycle
+			// (before the browser paints). Doc changes, viewport changes and
+			// cursor moves all reshape the runs — cursor moves decide whether
+			// the `==` / `**` delimiter spans are visible at all.
+			applyHighlightClasses(update.view);
 		}
-	},
-	{
-		decorations: (v) => v.decorations,
+
+		destroy() {
+			this.observer.disconnect();
+		}
 	},
 );
 
