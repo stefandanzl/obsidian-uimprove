@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"inlineSourceMap": false,
+		"inlineSources": false,
+		"module": "ESNext",
+		"target": "ES2022",
+		"allowJs": true,
+		"noImplicitAny": true,
+		"moduleResolution": "bundler",
+		"importHelpers": true,
+		"isolatedModules": true,
+		// "ignoreDeprecations": "6.0",
+		"strictNullChecks": true,
+		"strictPropertyInitialization": false,
+		"allowSyntheticDefaultImports": true,
+		"useUnknownInCatchVariables": false,
+		"lib": ["DOM", "ES2022"],
+		"paths": { "*": ["./*"] }
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["node_modules", "tests/"]
+}

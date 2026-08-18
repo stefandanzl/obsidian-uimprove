@@ -1,0 +1,11 @@
+{
+	"id": "PLUGIN_ID",
+	"name": "PLUGIN_NAME",
+	"version": "0.1.0",
+	"minAppVersion": "1.12.0",
+	"description": "PLUGIN_DESCRIPTION",
+	"author": "AUTHOR_NAME",
+	"authorUrl": "AUTHOR_URL",
+	"fundingUrl": "",
+	"isDesktopOnly": false
+}
