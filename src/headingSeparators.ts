@@ -31,23 +31,45 @@ const STYLE_ID = "uimprove-heading-separator-styles";
 
 const HEADING_SEPARATOR_CSS = `
 :root {
-	--uimprove-separator-thickness: 2px;
-	--uimprove-separator-width: calc(100% - 2em);
+    --uimprove-separator-base-thickness: 1.5px;
 }
 
-.uimprove-separator-1 { --uimprove-separator-color: var(--h1-color); }
-.uimprove-separator-2 { --uimprove-separator-color: var(--h2-color); }
-.uimprove-separator-3 { --uimprove-separator-color: var(--h3-color); }
-.uimprove-separator-4 { --uimprove-separator-color: var(--h4-color); }
-.uimprove-separator-5 { --uimprove-separator-color: var(--h5-color); }
-.uimprove-separator-6 { --uimprove-separator-color: var(--h6-color); }
+
+.uimprove-separator-1 { 
+	--uimprove-separator-color: var(--h1-color);
+	--uimprove-separator-thickness: calc(var(--uimprove-separator-base-thickness) * 3.6);
+}
+.uimprove-separator-2 { 
+	--uimprove-separator-color: var(--h2-color);
+	--uimprove-separator-thickness: calc(var(--uimprove-separator-base-thickness) * 2.8);
+}
+.uimprove-separator-3 { 
+	--uimprove-separator-color: var(--h3-color);
+	--uimprove-separator-thickness: calc(var(--uimprove-separator-base-thickness) * 2.2);
+}
+.uimprove-separator-4 { 
+	--uimprove-separator-color: var(--h4-color); 
+	--uimprove-separator-thickness: calc(var(--uimprove-separator-base-thickness) * 1.8);
+}
+.uimprove-separator-5 { 
+	--uimprove-separator-color: var(--h5-color);
+	--uimprove-separator-thickness: calc(var(--uimprove-separator-base-thickness) * 1.4);
+}
+.uimprove-separator-6 { 
+	--uimprove-separator-color: var(--h6-color);
+	--uimprove-separator-thickness: calc(var(--uimprove-separator-base-thickness) * 1.0);
+}
+
 
 span.uimprove-separator {
-	display: inline-block;
-	width: var(--uimprove-separator-width);
-	border-top: var(--uimprove-separator-thickness) solid
-		var(--uimprove-separator-color, var(--h1-color));
-	vertical-align: middle;
+	flex-grow: 1;
+	border-top: var(--uimprove-separator-thickness) solid var(--uimprove-separator-color, var(--caret-color));
+}
+
+
+.markdown-source-view .cm-line:has(.uimprove-separator) {
+    display: flex !important;
+    align-items: center !important;
 }
 `;
 
