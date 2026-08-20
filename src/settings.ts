@@ -105,8 +105,9 @@ export default class UImproveSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Collapsed sections")
 			.setDesc(
-				"Headings marked with a single dash (# -) fold automatically when " +
-					"the file opens. The dash is hidden in both editing and reading view.",
+				"Headings marked with a colon (# :) fold automatically when the file " +
+					"opens. The marker is hidden in editing and reading view, and links " +
+					"([[#Heading]]) resolve with and without it.",
 			)
 			.addToggle((toggle) =>
 				toggle

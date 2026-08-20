@@ -19,30 +19,32 @@ import { Editor, Notice } from "obsidian";
 /**
  * Collapsed sections.
  *
- * Headings whose text starts with the marker — a dash followed by a space
- * or end-of-line (`# -`, `# - `, `# - Actual heading text`) — are
+ * Headings whose text starts with the marker — a colon followed by a space
+ * or end-of-line (`# :`, `# : `, `# : Actual heading text`) — are
  * automatically folded when the file opens. The marker stays in plain
  * Markdown so files stay portable and fold state needs no database.
+ *
+ * The colon is chosen deliberately: Obsidian's heading-link matching
+ * ignores it, so [[#Heading]] resolves identically with and without the
+ * marker — toggling never invalidates links, and no link rewriting is
+ * needed.
  *
  * Live Preview hides the marker via a replacing decoration, so the heading
  * renders as its normal text; Reading view strips it in a post-processor.
  * The initial fold waits for the syntax tree (retrying until available),
  * then fires foldEffect with the section range from the language's fold
  * service — the same ranges Obsidian's fold gutter uses.
- *
- * Distinct from heading separators by construction: a separator heading's
- * ENTIRE text is 3+ dashes, which does not match the marker pattern.
  */
 
 /** Live toggle state, consulted by the plugin and the post-processor. */
 export const collapsedSectionsState = { enabled: true };
 
 /** Heading line that carries the collapse marker. */
-const MARKER_LINE = /^#{1,6}[ \t]+-( |$)/;
+const MARKER_LINE = /^#{1,6}[ \t]+:( |$)/;
 
-/** Heading CONTENT carries the marker: dash then space or end. */
+/** Heading CONTENT carries the marker: colon then space or end. */
 function hasCollapseMarker(text: string): boolean {
-	return /^-( |$)/.test(text);
+	return /^:( |$)/.test(text);
 }
 
 function buildCollapseMarkerDecorations(view: EditorView): DecorationSet {
@@ -75,8 +77,8 @@ function buildCollapseMarkerDecorations(view: EditorView): DecorationSet {
 					if (isCursorInLine) {
 						return;
 					}
-					// Hide the marker: dash plus its one following space.
-					const length = content.match(/^-( ?)/)![0].length;
+					// Hide the marker: colon plus its one following space.
+					const length = content.match(/^:( ?)/)![0].length;
 					builder.add(
 						node.from,
 						node.from + length,
@@ -187,7 +189,7 @@ export function toggleCollapsedSection(editor: Editor): void {
 	}
 
 	const text = editor.getLine(line);
-	const withMarker = text.match(/^(#{1,6}[ \t]+)(- ?)/);
+	const withMarker = text.match(/^(#{1,6}[ \t]+)(: ?)/);
 	if (withMarker) {
 		// Remove the marker and unfold the section. The end column is
 		// prefix + marker length — the marker's length alone would be a
@@ -203,7 +205,7 @@ export function toggleCollapsedSection(editor: Editor): void {
 	} else {
 		// Add the marker after the # marks.
 		const ch = text.match(/^#{1,6}[ \t]+/)![0].length;
-		editor.replaceRange("- ", { line, ch }, { line, ch });
+		editor.replaceRange(": ", { line, ch }, { line, ch });
 	}
 
 	// Fold/unfold via the fold service — positions from the post-edit state.
@@ -220,7 +222,7 @@ export function toggleCollapsedSection(editor: Editor): void {
 }
 
 /**
- * Reading view counterpart: hides the dash marker so the heading renders
+ * Reading view counterpart: hides the colon marker so the heading renders
  * normally. The element stays an <hN> (outline unaffected — that reads the
  * file cache, not the DOM).
  */
@@ -234,13 +236,13 @@ export function collapsedSectionsPostProcessor(el: HTMLElement): void {
 		if (!hasCollapseMarker(heading.textContent ?? "")) {
 			continue;
 		}
-		// Strip the marker (dash + one space) from the first text node so
+		// Strip the marker (colon + one space) from the first text node so
 		// nested formatting in the rest of the heading survives.
 		const first = heading.firstChild;
 		if (first && first.nodeType === Node.TEXT_NODE) {
-			first.textContent = (first.textContent ?? "").replace(/^-( ?)/, "");
+			first.textContent = (first.textContent ?? "").replace(/^:( ?)/, "");
 		} else {
-			heading.textContent = (heading.textContent ?? "").replace(/^-( ?)/, "");
+			heading.textContent = (heading.textContent ?? "").replace(/^:( ?)/, "");
 		}
 	}
 }
