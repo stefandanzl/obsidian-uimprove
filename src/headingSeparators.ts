@@ -103,9 +103,14 @@ class SeparatorWidget extends WidgetType {
 	}
 }
 
-/** Heading content text that means "separator": three or more dashes. */
-function isSeparatorText(text: string): boolean {
-	return /^-{3,}$/.test(text.trim());
+/**
+ * Heading content text that means "separator": three or more dashes,
+ * optionally preceded by the collapsed-sections marker (`: `) — a marked
+ * separator (`# : ----`) renders as a separator line AND folds on load.
+ * Returns the match (group 1 = the dash run) or null.
+ */
+function matchSeparatorText(text: string): RegExpMatchArray | null {
+	return text.match(/^(?:: ?)?(-{3,})\s*$/);
 }
 
 function buildHeadingSeparatorDecorations(view: EditorView): DecorationSet {
@@ -129,7 +134,9 @@ function buildHeadingSeparatorDecorations(view: EditorView): DecorationSet {
 				}
 
 				const level = name.match(/header-([1-6])/);
-				if (level && isSeparatorText(view.state.sliceDoc(node.from, node.to))) {
+				const content = view.state.sliceDoc(node.from, node.to);
+				const separator = level && matchSeparatorText(content);
+				if (separator) {
 					// Zeile der aktuellen Syntax-Node ermitteln
 					const line = view.state.doc.lineAt(node.from);
 
@@ -137,9 +144,13 @@ function buildHeadingSeparatorDecorations(view: EditorView): DecorationSet {
 					const isCursorInLine = selection.to >= line.from && selection.from <= line.to;
 
 					if (!isCursorInLine) {
+						// Replace only the dash run — an optional leading
+						// marker belongs to the collapsed-sections feature.
+						const dashEnd = node.to - (content.length - content.trimEnd().length);
+						const dashFrom = dashEnd - separator[1].length;
 						builder.add(
-							node.from,
-							node.to,
+							dashFrom,
+							dashEnd,
 							Decoration.replace({ widget: new SeparatorWidget(Number(level[1])) }),
 						);
 					}
@@ -171,15 +182,16 @@ export const headingSeparatorPlugin = ViewPlugin.fromClass(
 );
 
 /**
- * Reading view counterpart: <hN> whose text is only dashes becomes a
- * separator line. The element stays an <hN>, so the outline is unaffected.
+ * Reading view counterpart: <hN> whose text is only dashes (optionally
+ * behind the collapse marker) becomes a separator line. The element stays
+ * an <hN>, so the outline is unaffected.
  */
 export function headingSeparatorPostProcessor(el: HTMLElement): void {
 	if (!headingSeparatorState.enabled) {
 		return;
 	}
 	for (const heading of Array.from(el.querySelectorAll("h1, h2, h3, h4, h5, h6"))) {
-		if (!isSeparatorText(heading.textContent ?? "")) {
+		if (!matchSeparatorText((heading.textContent ?? "").trim())) {
 			continue;
 		}
 		const level = heading.tagName[1];
