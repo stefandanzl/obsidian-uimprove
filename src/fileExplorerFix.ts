@@ -1,5 +1,5 @@
 import { around } from "monkey-around";
-import type { App } from "obsidian";
+import { Notice, type App } from "obsidian";
 import type UImprovePlugin from "./main";
 
 /** Live toggle state, consulted by the patch wrappers. */
@@ -107,25 +107,39 @@ function explorerViews(app: App): FileExplorerViewLike[] {
 export function applyFileExplorerFix(plugin: UImprovePlugin): void {
 	fileExplorerFixState.enabled = plugin.settings.fileExplorerFixEnabled;
 	if (plugin.settings.fileExplorerFixEnabled) {
-		activateFileExplorerFix(plugin);
+		const activate = (): void => {
+			void activateFileExplorerFix(plugin);
+		};
+		if (plugin.app.workspace.layoutReady) {
+			activate();
+		} else {
+			plugin.app.workspace.onLayoutReady(activate);
+		}
 	} else {
 		deactivateFileExplorerFix();
 	}
 }
 
-function activateFileExplorerFix(plugin: UImprovePlugin): void {
-	const bindAll = (): void => {
-		for (const view of explorerViews(plugin.app)) {
-			bindExplorerView(view);
+async function activateFileExplorerFix(plugin: UImprovePlugin): Promise<void> {
+	// Deferred views (e.g. the mobile drawer explorer) stay unloaded — with
+	// empty fileItems — until first revealed. Load them explicitly so
+	// binding is deterministic on every platform: no events, no polling.
+	const leaves = plugin.app.workspace.getLeavesOfType("file-explorer");
+	for (const leaf of leaves) {
+		if (leaf.isDeferred) {
+			await leaf.loadIfDeferred();
 		}
-	};
-
-	// onload can run before the workspace layout exists — fileItems would be
-	// empty and no prototype would ever get patched. Bind once ready.
-	if (plugin.app.workspace.layoutReady) {
-		bindAll();
-	} else {
-		plugin.app.workspace.onLayoutReady(bindAll);
+	}
+	const views = explorerViews(plugin.app);
+	if (!views.some((view) => Object.keys(view.fileItems ?? {}).length > 0)) {
+		new Notice(
+			"[ UImprove file explorer fix ] \nNo populated file explorer view found",
+			20_000,
+		).messageEl.addClass("mod-warning");
+		return;
+	}
+	for (const view of views) {
+		bindExplorerView(view);
 	}
 }
 
