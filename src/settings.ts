@@ -13,6 +13,8 @@ export interface UImproveSettings {
 	fileExplorerStyles: Record<string, FileExplorerStyle>;
 	/** Headings with only dashes (# ---) render as separator lines. */
 	headingSeparatorEnabled: boolean;
+	/** Headings marked with a single dash (# -) fold automatically on load. */
+	collapsedSectionsEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: UImproveSettings = {
@@ -21,6 +23,7 @@ export const DEFAULT_SETTINGS: UImproveSettings = {
 	fileExplorerStylesEnabled: true,
 	fileExplorerStyles: {},
 	headingSeparatorEnabled: true,
+	collapsedSectionsEnabled: true,
 };
 
 export default class UImproveSettingTab extends PluginSettingTab {
@@ -96,6 +99,22 @@ export default class UImproveSettingTab extends PluginSettingTab {
 						this.plugin.settings.headingSeparatorEnabled = value;
 						await this.plugin.saveSettings();
 						this.plugin.applyHeadingSeparators();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Collapsed sections")
+			.setDesc(
+				"Headings marked with a single dash (# -) fold automatically when " +
+					"the file opens. The dash is hidden in both editing and reading view.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.collapsedSectionsEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.collapsedSectionsEnabled = value;
+						await this.plugin.saveSettings();
+						this.plugin.applyCollapsedSections();
 					}),
 			);
 	}

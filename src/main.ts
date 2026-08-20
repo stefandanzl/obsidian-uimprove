@@ -19,6 +19,11 @@ import {
 	injectHeadingSeparatorStyles,
 	removeHeadingSeparatorStyles,
 } from "./headingSeparators";
+import {
+	collapsedSectionsPlugin,
+	collapsedSectionsPostProcessor,
+	collapsedSectionsState,
+} from "./collapsedSections";
 import UImproveSettingTab from "./settings";
 import { DEFAULT_SETTINGS, type UImproveSettings } from "./settings";
 
@@ -45,6 +50,11 @@ export default class UImprovePlugin extends Plugin {
 		this.registerEditorExtension(headingSeparatorPlugin);
 		this.registerMarkdownPostProcessor(headingSeparatorPostProcessor);
 		this.applyHeadingSeparators();
+
+		// Collapsed sections (auto-fold marked headings on load)
+		this.registerEditorExtension(collapsedSectionsPlugin);
+		this.registerMarkdownPostProcessor(collapsedSectionsPostProcessor);
+		this.applyCollapsedSections();
 	}
 
 	onunload() {
@@ -88,6 +98,11 @@ export default class UImprovePlugin extends Plugin {
 		} else {
 			removeHeadingSeparatorStyles();
 		}
+	}
+
+	/** Applies the collapsed sections toggle: shared state. */
+	applyCollapsedSections(): void {
+		collapsedSectionsState.enabled = this.settings.collapsedSectionsEnabled;
 	}
 
 	async saveSettings(): Promise<void> {
