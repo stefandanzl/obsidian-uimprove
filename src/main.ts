@@ -23,6 +23,7 @@ import {
 	collapsedSectionsPlugin,
 	collapsedSectionsPostProcessor,
 	collapsedSectionsState,
+	toggleCollapsedSection,
 } from "./collapsedSections";
 import UImproveSettingTab from "./settings";
 import { DEFAULT_SETTINGS, type UImproveSettings } from "./settings";
@@ -55,6 +56,12 @@ export default class UImprovePlugin extends Plugin {
 		this.registerEditorExtension(collapsedSectionsPlugin);
 		this.registerMarkdownPostProcessor(collapsedSectionsPostProcessor);
 		this.applyCollapsedSections();
+
+		this.addCommand({
+			id: "toggle-collapsed-section",
+			name: "Toggle Collapsed Section",
+			editorCallback: (editor) => toggleCollapsedSection(editor),
+		});
 	}
 
 	onunload() {

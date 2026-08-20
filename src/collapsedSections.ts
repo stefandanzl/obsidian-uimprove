@@ -3,6 +3,7 @@ import {
 	foldable,
 	syntaxTree,
 	syntaxTreeAvailable,
+	unfoldEffect,
 } from "@codemirror/language";
 import type { SyntaxNodeRef } from "@lezer/common";
 import { RangeSet, RangeSetBuilder } from "@codemirror/state";
@@ -13,6 +14,7 @@ import {
 	ViewPlugin,
 	type ViewUpdate,
 } from "@codemirror/view";
+import { Editor, Notice } from "obsidian";
 
 /**
  * Collapsed sections.
@@ -158,6 +160,64 @@ export const collapsedSectionsPlugin = ViewPlugin.fromClass(
 		decorations: (v) => v.decorations,
 	},
 );
+
+/**
+ * Command "Toggle Collapsed Section": adds or removes the marker on the
+ * heading of the section the cursor is in, then folds/unfolds that section
+ * immediately for instant UI feedback.
+ */
+export function toggleCollapsedSection(editor: Editor): void {
+	if (!collapsedSectionsState.enabled) {
+		new Notice("Collapsed sections are disabled in UImprove settings.");
+		return;
+	}
+	const view = (editor as unknown as { cm?: EditorView }).cm;
+	if (!view) {
+		return;
+	}
+
+	// Walk up from the cursor to the section's heading.
+	let line = editor.getCursor().line;
+	while (line >= 0 && !/^#{1,6}[ \t]+/.test(editor.getLine(line))) {
+		line--;
+	}
+	if (line < 0) {
+		new Notice("Cursor is not inside a heading section.");
+		return;
+	}
+
+	const text = editor.getLine(line);
+	const withMarker = text.match(/^(#{1,6}[ \t]+)(- ?)/);
+	if (withMarker) {
+		// Remove the marker and unfold the section. The end column is
+		// prefix + marker length — the marker's length alone would be a
+		// backwards range for any level above H1.
+		const ch = withMarker[1].length;
+		const from = { line, ch };
+		const to = { line, ch: ch + withMarker[2].length };
+		if (to.ch <= from.ch) {
+			console.error(`[Collapsed Sections] backwards range occurred with from.ch: ${from.ch} and to.ch: ${to.ch}`)
+			return; // defensive: never hand Obsidian a backwards range
+		}
+		editor.replaceRange("", from, to);
+	} else {
+		// Add the marker after the # marks.
+		const ch = text.match(/^#{1,6}[ \t]+/)![0].length;
+		editor.replaceRange("- ", { line, ch }, { line, ch });
+	}
+
+	// Fold/unfold via the fold service — positions from the post-edit state.
+	const docLine = view.state.doc.line(line + 1);
+	const range = foldable(view.state, docLine.from, docLine.to);
+	if (!range) {
+		return;
+	}
+	view.dispatch({
+		effects: [
+			withMarker ? unfoldEffect.of(range) : foldEffect.of(range),
+		],
+	});
+}
 
 /**
  * Reading view counterpart: hides the dash marker so the heading renders
