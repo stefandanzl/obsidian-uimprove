@@ -15,6 +15,7 @@ import {
 import {
 	headingSeparatorPlugin,
 	headingSeparatorPostProcessor,
+	headingSeparatorState,
 	injectHeadingSeparatorStyles,
 	removeHeadingSeparatorStyles,
 } from "./headingSeparators";
@@ -40,6 +41,9 @@ export default class UImprovePlugin extends Plugin {
 		this.registerFileExplorerStyleMenu();
 		this.applyFileExplorerStyles();
 
+		// Heading separators (Live Preview + Reading view)
+		this.registerEditorExtension(headingSeparatorPlugin);
+		this.registerMarkdownPostProcessor(headingSeparatorPostProcessor);
 		this.applyHeadingSeparators();
 	}
 
@@ -76,13 +80,14 @@ export default class UImprovePlugin extends Plugin {
 		registerFileExplorerStyleMenu(this);
 	}
 
+	/** Applies the heading separators toggle: shared state + injected styles. */
 	applyHeadingSeparators(): void {
-		injectHeadingSeparatorStyles();
-		// 2. Editor Extension für Live Preview einhängen
-		this.registerEditorExtension([headingSeparatorPlugin]);
-
-		// 3. Markdown Post Processor für Reading View einhängen
-		this.registerMarkdownPostProcessor(headingSeparatorPostProcessor);
+		headingSeparatorState.enabled = this.settings.headingSeparatorEnabled;
+		if (headingSeparatorState.enabled) {
+			injectHeadingSeparatorStyles();
+		} else {
+			removeHeadingSeparatorStyles();
+		}
 	}
 
 	async saveSettings(): Promise<void> {
