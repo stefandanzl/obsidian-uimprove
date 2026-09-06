@@ -71,6 +71,14 @@ span.uimprove-separator {
     display: flex !important;
     align-items: center !important;
 }
+
+/* Reading view (and embeds/previews): the rewritten <hN> carries
+.uimprove-hsep — make it a flex row so the span can grow. */
+h1.uimprove-hsep, h2.uimprove-hsep, h3.uimprove-hsep,
+h4.uimprove-hsep, h5.uimprove-hsep, h6.uimprove-hsep {
+    display: flex;
+    align-items: center;
+}
 `;
 
 export function injectHeadingSeparatorStyles(): void {
