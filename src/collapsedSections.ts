@@ -1,10 +1,4 @@
-import {
-	foldEffect,
-	foldable,
-	syntaxTree,
-	syntaxTreeAvailable,
-	unfoldEffect,
-} from "@codemirror/language";
+import { foldEffect, foldable, syntaxTree, syntaxTreeAvailable, unfoldEffect } from "@codemirror/language";
 import type { SyntaxNodeRef } from "@lezer/common";
 import { RangeSet, RangeSetBuilder } from "@codemirror/state";
 import {
@@ -62,28 +56,19 @@ function buildCollapseMarkerDecorations(view: EditorView): DecorationSet {
 			to,
 			enter: (node: SyntaxNodeRef) => {
 				const name = node.name.toLowerCase();
-				if (
-					!name.includes("header") ||
-					name.includes("formatting") ||
-					name.includes("code")
-				) {
+				if (!name.includes("header") || name.includes("formatting") || name.includes("code")) {
 					return;
 				}
 				const content = view.state.sliceDoc(node.from, node.to);
 				if (name.match(/header-[1-6]/) && hasCollapseMarker(content)) {
 					const line = view.state.doc.lineAt(node.from);
-					const isCursorInLine =
-						selection.to >= line.from && selection.from <= line.to;
+					const isCursorInLine = selection.to >= line.from && selection.from <= line.to;
 					if (isCursorInLine) {
 						return;
 					}
 					// Hide the marker: colon plus its one following space.
 					const length = content.match(/^:( ?)/)![0].length;
-					builder.add(
-						node.from,
-						node.from + length,
-						Decoration.replace({}),
-					);
+					builder.add(node.from, node.from + length, Decoration.replace({}));
 				}
 			},
 		});
@@ -198,7 +183,9 @@ export function toggleCollapsedSection(editor: Editor): void {
 		const from = { line, ch };
 		const to = { line, ch: ch + withMarker[2].length };
 		if (to.ch <= from.ch) {
-			console.error(`[Collapsed Sections] backwards range occurred with from.ch: ${from.ch} and to.ch: ${to.ch}`)
+			console.error(
+				`[Collapsed Sections] backwards range occurred with from.ch: ${from.ch} and to.ch: ${to.ch}`,
+			);
 			return; // defensive: never hand Obsidian a backwards range
 		}
 		editor.replaceRange("", from, to);
@@ -215,9 +202,7 @@ export function toggleCollapsedSection(editor: Editor): void {
 		return;
 	}
 	view.dispatch({
-		effects: [
-			withMarker ? unfoldEffect.of(range) : foldEffect.of(range),
-		],
+		effects: [withMarker ? unfoldEffect.of(range) : foldEffect.of(range)],
 	});
 }
 
@@ -230,9 +215,7 @@ export function collapsedSectionsPostProcessor(el: HTMLElement): void {
 	if (!collapsedSectionsState.enabled) {
 		return;
 	}
-	for (const heading of Array.from(
-		el.querySelectorAll("h1, h2, h3, h4, h5, h6"),
-	)) {
+	for (const heading of Array.from(el.querySelectorAll("h1, h2, h3, h4, h5, h6"))) {
 		if (!hasCollapseMarker(heading.textContent ?? "")) {
 			continue;
 		}
