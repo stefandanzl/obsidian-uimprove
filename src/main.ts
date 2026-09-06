@@ -5,6 +5,7 @@ import {
 	highlightPostProcessor,
 	injectHighlightFixStyles,
 	removeHighlightFixStyles,
+	showHighlightColorMenu,
 } from "./highlightFixPlugin";
 import { applyFileExplorerFix, deactivateFileExplorerFix } from "./fileExplorerFix";
 import {
@@ -61,6 +62,13 @@ export default class UImprovePlugin extends Plugin {
 			id: "toggle-collapsed-section",
 			name: "Toggle Collapsed Section",
 			editorCallback: (editor) => toggleCollapsedSection(editor),
+		});
+
+		this.addCommand({
+			id: "show-highlight-color-menu",
+			name: "Show highlight color menu",
+			icon: "highlighter",
+			editorCallback: (editor) => showHighlightColorMenu(this.app, editor),
 		});
 	}
 

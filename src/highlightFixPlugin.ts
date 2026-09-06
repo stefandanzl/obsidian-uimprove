@@ -8,6 +8,7 @@ import {
 	ViewPlugin,
 	type ViewUpdate,
 } from "@codemirror/view";
+import { type App, type Editor, Menu } from "obsidian";
 
 // Pre-instantiated decorations: Decoration.mark objects are immutable and
 // should be shared instead of recreated on every rebuild.
@@ -229,4 +230,67 @@ export function highlightPostProcessor(el: HTMLElement): void {
 	for (const mark of Array.from(el.querySelectorAll("mark"))) {
 		mark.classList.add("uimprove-highlight-start", "uimprove-highlight-end");
 	}
+}
+
+/**
+ * Command "Show highlight color menu": opens the highlight color picker
+ * (the submenu otherwise buried two levels deep in the editor context
+ * menu) directly at the cursor. Pure public API — each item just executes
+ * Obsidian's own built-in `editor:toggle-highlight…` commands, and the
+ * swatch markup reuses the native `.highlight-swatch` styling.
+ */
+
+interface HighlightColor {
+	commandId: string;
+	title: string;
+	/** null = the "Default" entry with the highlighter icon. */
+	swatch: string | null;
+}
+
+const HIGHLIGHT_COLORS: HighlightColor[] = [
+	{ commandId: "editor:toggle-highlight", title: "Default", swatch: null },
+	{ commandId: "editor:toggle-highlight-red", title: "Red", swatch: "red" },
+	{ commandId: "editor:toggle-highlight-orange", title: "Orange", swatch: "orange" },
+	{ commandId: "editor:toggle-highlight-yellow", title: "Yellow", swatch: "yellow" },
+	{ commandId: "editor:toggle-highlight-green", title: "Green", swatch: "green" },
+	{ commandId: "editor:toggle-highlight-blue", title: "Blue", swatch: "blue" },
+	{ commandId: "editor:toggle-highlight-purple", title: "Purple", swatch: "purple" },
+];
+
+export function showHighlightColorMenu(app: App, editor: Editor): void {
+	// Runtime-present but not in the public typings.
+	const commands = (
+		app as unknown as {
+			commands: { executeCommandById: (id: string) => unknown };
+		}
+	).commands;
+
+	const menu = new Menu();
+
+	for (const color of HIGHLIGHT_COLORS) {
+		menu.addItem((item) => {
+			item.setTitle(color.title).onClick(() => {
+				commands.executeCommandById(color.commandId);
+			});
+			if (color.swatch === null) {
+				item.setIcon("highlighter");
+			} else {
+				// Replicate the native submenu's swatch markup so Obsidian's
+				// own .highlight-swatch CSS renders it.
+				const dom = (item as unknown as { dom: HTMLElement }).dom;
+				const iconEl = dom.querySelector(".menu-item-icon");
+				iconEl?.createDiv({
+					cls: "highlight-swatch",
+					attr: { "data-highlight": color.swatch },
+				});
+			}
+		});
+	}
+
+	// Show at the cursor.
+	const coords = editor.coordsAtPos(editor.getCursor("to"), false);
+	menu.showAtPosition({
+		x: (coords.left + coords.right) / 2,
+		y: coords.bottom + 6,
+	});
 }

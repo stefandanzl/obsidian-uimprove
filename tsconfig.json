@@ -15,7 +15,8 @@
 		"allowSyntheticDefaultImports": true,
 		"useUnknownInCatchVariables": false,
 		"lib": ["DOM", "ES2022"],
-		"paths": { "*": ["./*"] }
+		"paths": { "*": ["./*"] },
+		"types": ["node", "@obsidian-typings/obsidian-public-latest"]
 	},
 	"include": ["**/*.ts"],
 	"exclude": ["node_modules", "tests/"]
