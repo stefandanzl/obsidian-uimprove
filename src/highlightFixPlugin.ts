@@ -27,35 +27,35 @@ export const highlightFixState = { enabled: true };
 const STYLE_ID = "uimprove-highlight-fix-styles";
 
 /** The highlight fix CSS, injected as a <style> element only while enabled. */
+
+/**
+	Colors are NOT opinionated here: backgrounds follow Obsidian's
+	--highlight-background (multicolor-aware, inherited from the native
+	span), text colors stay native. Per-color overrides belong in a user
+	snippet via the native classes; --uimprove-highlight-bg forces one
+	background color for all, --uimprove-highlight-radius adjusts corners. 
+*/
 const HIGHLIGHT_FIX_CSS = `
-:root {
-	/* You can use your own css snippet overrides here too */
-	--uimprove-highlight-bg: var(--uimprove-user-highlight-bg, rgb(0 100 50 / 50%));
-    --uimprove-highlight-text: var(--uimprove-user-highlight-text, rgb(0 255 69 / 91%));
-    --uimprove-highlight-radius: var(--uimprove-user-highlight-radius, 0.5em);
-}
 
 /* Editor (Live Preview): disable the native, square highlight boxes … */
 .cm-s-obsidian span.cm-highlight {
 	background-color: transparent;
 }
 
-.cm-s-obsidian span.cm-highlight, .markdown-rendered mark, mark {
-    color: var(--uimprove-highlight-text);
-    box-decoration-break: clone; 
-}
-
 .markdown-rendered mark, mark {
-	background-color: var(--uimprove-highlight-bg);
-    border-radius: var(--uimprove-highlight-radius);
+	background-color: var(--uimprove-highlight-bg, var(--highlight-background));
+    border-radius: var(--uimprove-highlight-radius, 0.5em);
+    box-decoration-break: clone;
 	padding: 0 8px 2px 8px;
 }
 
-/* … and paint our own continuous one. */
+/* … and paint our own continuous one. The color follows Obsidian's
+   multicolor: the native cm-highlight-<color> class sets
+   --highlight-background on our parent, which inherits down to us. */
 .cm-s-obsidian .uimprove-highlight-start,
 .cm-s-obsidian .uimprove-highlight-middle,
 .cm-s-obsidian .uimprove-highlight-end {
-	background-color: var(--uimprove-highlight-bg);
+	background-color: var(--uimprove-highlight-bg, var(--highlight-background));
 	padding-top: 0;
     padding-bottom: 2px;
 
@@ -65,8 +65,8 @@ const HIGHLIGHT_FIX_CSS = `
 }
 
 .cm-s-obsidian .uimprove-highlight-start {
-	border-top-left-radius: var(--uimprove-highlight-radius);
-	border-bottom-left-radius: var(--uimprove-highlight-radius);
+	border-top-left-radius: var(--uimprove-highlight-radius, 0.5em);
+	border-bottom-left-radius: var(--uimprove-highlight-radius, 0.5em);
 	padding-left: 8px;
 }
 
@@ -75,13 +75,13 @@ const HIGHLIGHT_FIX_CSS = `
 }
 
 .cm-s-obsidian .uimprove-highlight-end {
-	border-top-right-radius: var(--uimprove-highlight-radius);
-	border-bottom-right-radius: var(--uimprove-highlight-radius);
+	border-top-right-radius: var(--uimprove-highlight-radius, 0.5em);
+	border-bottom-right-radius: var(--uimprove-highlight-radius, 0.5em);
 	padding-right: 8px;
 }
 
 .cm-s-obsidian span.cm-formatting.cm-formatting-highlight.cm-highlight {
-	background-color: var(--uimprove-highlight-bg);
+	background-color: var(--uimprove-highlight-bg, var(--highlight-background));
 }
 `;
 
