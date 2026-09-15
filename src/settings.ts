@@ -15,6 +15,8 @@ export interface UImproveSettings {
 	headingSeparatorEnabled: boolean;
 	/** Headings marked with a single dash (# -) fold automatically on load. */
 	collapsedSectionsEnabled: boolean;
+	/** Canvas UI features (add-group button, …). */
+	canvasFeaturesEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: UImproveSettings = {
@@ -24,6 +26,7 @@ export const DEFAULT_SETTINGS: UImproveSettings = {
 	fileExplorerStyles: {},
 	headingSeparatorEnabled: true,
 	collapsedSectionsEnabled: true,
+	canvasFeaturesEnabled: true,
 };
 
 export default class UImproveSettingTab extends PluginSettingTab {
@@ -116,6 +119,22 @@ export default class UImproveSettingTab extends PluginSettingTab {
 						this.plugin.settings.collapsedSectionsEnabled = value;
 						await this.plugin.saveSettings();
 						this.plugin.applyCollapsedSections();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Canvas features")
+			.setDesc(
+				"UI enhancements for canvas views: an add-group button in the card " +
+					"menu (click to drop a group in the center, drag to place it).",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.canvasFeaturesEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.canvasFeaturesEnabled = value;
+						await this.plugin.saveSettings();
+						this.plugin.applyCanvasFeatures();
 					}),
 			);
 	}

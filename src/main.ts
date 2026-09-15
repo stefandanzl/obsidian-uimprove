@@ -28,6 +28,8 @@ import {
 } from "./collapsedSections";
 import UImproveSettingTab from "./settings";
 import { DEFAULT_SETTINGS, type UImproveSettings } from "./settings";
+import { registerConsoleCommands } from "./consoleUtils";
+import { applyCanvasFeatures, registerCanvasFeatures } from "./canvasFeatures";
 
 export default class UImprovePlugin extends Plugin {
 	declare settings: UImproveSettings;
@@ -66,6 +68,12 @@ export default class UImprovePlugin extends Plugin {
 		this.registerEditorExtension(collapsedSectionsPlugin);
 		this.registerMarkdownPostProcessor(collapsedSectionsPostProcessor);
 		this.applyCollapsedSections();
+
+		// Canvas UI features (add-group button, …)
+		registerCanvasFeatures(this);
+		this.applyCanvasFeatures();
+
+		registerConsoleCommands(this);
 	}
 
 	onunload() {
@@ -103,6 +111,11 @@ export default class UImprovePlugin extends Plugin {
 	/** Applies the file explorer fix toggle: shared state + patches. */
 	applyFileExplorerFix(): void {
 		applyFileExplorerFix(this);
+	}
+
+	/** Applies the canvas features toggle: inject or remove UI elements. */
+	applyCanvasFeatures(): void {
+		applyCanvasFeatures(this);
 	}
 
 	/** Applies the folder styles toggle: injected styles. */
