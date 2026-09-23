@@ -16,16 +16,16 @@ const STRETCH_CLASS = "uimprove-table-stretch";
 const STYLE_ID = "uimprove-table-stretch-styles";
 
 const TABLE_STRETCH_CSS = `
-body.uimprove-table-stretch .markdown-rendered table {
-	min-width: min(100%, var(--file-line-width));
-	max-width: 100%;
+body.uimprove-table-stretch .markdown-rendered table,
+body.uimprove-table-stretch .markdown-source-view .cm-table-widget .table-wrapper {
+    min-width: min(100%, var(--file-line-width));
+    max-width: 100%;
 }
 
-/* Live Preview: the widget's table editor fills its wrapper natively —
-   clamp the wrapper instead. */
-body.uimprove-table-stretch .markdown-source-view .cm-table-widget .table-wrapper {
-	min-width: min(100%, var(--file-line-width));
-	max-width: 100%;
+/* Allows frontmatter like 'cssclasses: [no-table-stretch]' to deactivate in single note files  */
+body.uimprove-table-stretch .markdown-rendered.no-table-stretch table,
+body.uimprove-table-stretch .markdown-source-view.no-table-stretch .cm-table-widget .table-wrapper {
+    min-width: auto !important;
 }
 `;
 
