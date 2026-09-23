@@ -30,6 +30,12 @@ import UImproveSettingTab from "./settings";
 import { DEFAULT_SETTINGS, type UImproveSettings } from "./settings";
 import { registerConsoleCommands } from "./consoleUtils";
 import { applyCanvasFeatures, registerCanvasFeatures } from "./canvasFeatures";
+import {
+	applyTableBreakout,
+	removeTableBreakoutTraces,
+	tableBreakoutPostProcessor,
+} from "./tableBreakout";
+import { applyTableStretch, removeTableStretchTraces } from "./tableStretch";
 
 export default class UImprovePlugin extends Plugin {
 	declare settings: UImproveSettings;
@@ -73,6 +79,13 @@ export default class UImprovePlugin extends Plugin {
 		registerCanvasFeatures(this);
 		this.applyCanvasFeatures();
 
+		// Table breakout (tables escape the readable line width)
+		this.registerMarkdownPostProcessor(tableBreakoutPostProcessor);
+		this.applyTableBreakout();
+
+		// Stretch tables (stretch up to / bounded by the available width)
+		this.applyTableStretch();
+
 		registerConsoleCommands(this);
 	}
 
@@ -82,6 +95,8 @@ export default class UImprovePlugin extends Plugin {
 		removeHighlightFixStyles();
 		removeFileExplorerStyles();
 		removeHeadingSeparatorStyles();
+		removeTableBreakoutTraces();
+		removeTableStretchTraces();
 	}
 
 	/** Applies the highlight fix toggle: shared state + injected styles. */
@@ -116,6 +131,16 @@ export default class UImprovePlugin extends Plugin {
 	/** Applies the canvas features toggle: inject or remove UI elements. */
 	applyCanvasFeatures(): void {
 		applyCanvasFeatures(this);
+	}
+
+	/** Applies the table breakout toggle: body class + styles. */
+	applyTableBreakout(): void {
+		applyTableBreakout(this);
+	}
+
+	/** Applies the stretch tables toggle: body class + styles. */
+	applyTableStretch(): void {
+		applyTableStretch(this);
 	}
 
 	/** Applies the folder styles toggle: injected styles. */

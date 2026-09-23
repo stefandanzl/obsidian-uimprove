@@ -17,6 +17,10 @@ export interface UImproveSettings {
 	collapsedSectionsEnabled: boolean;
 	/** Canvas UI features (add-group button, …). */
 	canvasFeaturesEnabled: boolean;
+	/** Tables escape the readable line width while text keeps its cap. */
+	tableBreakoutEnabled: boolean;
+	/** Stretch tables up to the available width. */
+	tableStretchEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: UImproveSettings = {
@@ -27,6 +31,8 @@ export const DEFAULT_SETTINGS: UImproveSettings = {
 	headingSeparatorEnabled: true,
 	collapsedSectionsEnabled: true,
 	canvasFeaturesEnabled: true,
+	tableBreakoutEnabled: true,
+	tableStretchEnabled: true,
 };
 
 export default class UImproveSettingTab extends PluginSettingTab {
@@ -135,6 +141,40 @@ export default class UImproveSettingTab extends PluginSettingTab {
 						this.plugin.settings.canvasFeaturesEnabled = value;
 						await this.plugin.saveSettings();
 						this.plugin.applyCanvasFeatures();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Table breakout")
+			.setDesc(
+				"Tables escape the readable line width while text keeps its cap and " +
+					"stays centered. Wide tables use the full view width — only ever " +
+					"as much of it as their content needs.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.tableBreakoutEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.tableBreakoutEnabled = value;
+						await this.plugin.saveSettings();
+						this.plugin.applyTableBreakout();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Stretch tables")
+			.setDesc(
+				"Tables narrower than the available width are stretched up to it " +
+					"(line width, or view width with the breakout above). Wide tables " +
+					"are bounded by it instead of scrolling.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.tableStretchEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.tableStretchEnabled = value;
+						await this.plugin.saveSettings();
+						this.plugin.applyTableStretch();
 					}),
 			);
 	}
