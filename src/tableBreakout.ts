@@ -96,7 +96,7 @@ function injectTableBreakoutStyles(): void {
 	}
 	const el = document.createElement("style");
 	el.id = STYLE_ID;
-	el.textContent = TABLE_BREAKOUT_CSS;
+	el.textContent = `@media screen {${TABLE_BREAKOUT_CSS}}`;
 	document.head.appendChild(el);
 }
 

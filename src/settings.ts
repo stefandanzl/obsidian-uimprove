@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Platform, PluginSettingTab, Setting } from "obsidian";
 import type UImprovePlugin from "./main";
 import type { FileExplorerStyle } from "./fileExplorerStyles";
 
@@ -144,38 +144,41 @@ export default class UImproveSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(containerEl)
-			.setName("Table breakout")
-			.setDesc(
-				"Tables escape the readable line width while text keeps its cap and " +
-					"stays centered. Wide tables use the full view width — only ever " +
-					"as much of it as their content needs.",
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.tableBreakoutEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.tableBreakoutEnabled = value;
-						await this.plugin.saveSettings();
-						this.plugin.applyTableBreakout();
-					}),
-			);
+		// Table features are desktop only — hide their settings on mobile
+		if (!Platform.isMobile) {
+			new Setting(containerEl)
+				.setName("Table breakout")
+				.setDesc(
+					"Tables escape the readable line width while text keeps its cap and " +
+						"stays centered. Wide tables use the full view width — only ever " +
+						"as much of it as their content needs.",
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.tableBreakoutEnabled)
+						.onChange(async (value) => {
+							this.plugin.settings.tableBreakoutEnabled = value;
+							await this.plugin.saveSettings();
+							this.plugin.applyTableBreakout();
+						}),
+				);
 
-		new Setting(containerEl)
-			.setName("Stretch tables")
-			.setDesc(
-				"Tables narrower than the available width are stretched up to it " +
-					"(line width, or view width with the breakout above). Wide tables " +
-					"are bounded by it instead of scrolling.",
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.tableStretchEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.tableStretchEnabled = value;
-						await this.plugin.saveSettings();
-						this.plugin.applyTableStretch();
-					}),
-			);
+			new Setting(containerEl)
+				.setName("Stretch tables")
+				.setDesc(
+					"Tables narrower than the available width are stretched up to it " +
+						"(line width, or view width with the breakout above). Wide tables " +
+						"are bounded by it instead of scrolling.",
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.tableStretchEnabled)
+						.onChange(async (value) => {
+							this.plugin.settings.tableStretchEnabled = value;
+							await this.plugin.saveSettings();
+							this.plugin.applyTableStretch();
+						}),
+				);
+		}
 	}
 }

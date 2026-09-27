@@ -35,7 +35,7 @@ function injectTableStretchStyles(): void {
 	}
 	const el = document.createElement("style");
 	el.id = STYLE_ID;
-	el.textContent = TABLE_STRETCH_CSS;
+	el.textContent = `@media screen {${TABLE_STRETCH_CSS}}`;
 	document.head.appendChild(el);
 }
 

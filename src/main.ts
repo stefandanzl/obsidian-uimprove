@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Platform, Plugin } from "obsidian";
 import {
 	highlightFixPlugin,
 	highlightFixState,
@@ -79,12 +79,14 @@ export default class UImprovePlugin extends Plugin {
 		registerCanvasFeatures(this);
 		this.applyCanvasFeatures();
 
-		// Table breakout (tables escape the readable line width)
-		this.registerMarkdownPostProcessor(tableBreakoutPostProcessor);
-		this.applyTableBreakout();
+		if (!Platform.isMobile) {
+			// Table breakout (tables escape the readable line width)
+			this.registerMarkdownPostProcessor(tableBreakoutPostProcessor);
+			this.applyTableBreakout();
 
-		// Stretch tables (stretch up to / bounded by the available width)
-		this.applyTableStretch();
+			// Stretch tables (stretch up to / bounded by the available width)
+			this.applyTableStretch();
+		}
 
 		registerConsoleCommands(this);
 	}

@@ -6,10 +6,10 @@
 * cssclasses: 
 *   - table-stretch
 */
-
-.markdown-rendered.table-stretch table,
-.markdown-source-view.table-stretch .cm-table-widget .table-wrapper,
-.markdown-source-view.table-stretch table {
-	min-width: min(100%, var(--file-line-width)) !important;
-	max-width: 100% !important;
+@media screen {
+	.table-stretch table,
+	.table-stretch .cm-table-widget .table-wrapper {
+		min-width: min(100%, var(--file-line-width)) !important;
+		max-width: 100% !important;
+	}
 }
